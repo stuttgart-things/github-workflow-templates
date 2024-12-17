@@ -65,6 +65,5 @@ tasks:
       - |
         echo "Enter to be created (remote) tag on the repository:"
         read TAG_NAME;
-
-      - git tag -a {{ .TAG_NAME }} -m 'updated for {{ .TAG_NAME }} on {{ .DATE }}'
-      - git push origin --tags
+        git tag -a ${TAG_NAME} -m 'updated for ${TAG_NAME} on {{ .DATE }}'
+        git push origin --tags
