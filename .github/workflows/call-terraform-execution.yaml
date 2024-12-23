@@ -1,0 +1,166 @@
+---
+name: Call Terraform Execution
+on:
+  workflow_call:
+    inputs:
+      folder:
+        required: true
+        type: string
+      branch:
+        required: true
+        type: string
+      operation:
+        required: false
+        type: string
+        default: apply
+      delete-folder:
+        required: false
+        type: boolean
+        default: true
+      variables:
+        required: false
+        type: string
+        #default: var1=value1;var2=value2
+      output:
+        required: false
+        type: boolean
+        default: false
+      runs-on:
+        required: true
+        type: string
+      environment-name:
+        default: k8s
+        required: false
+        type: string
+      working-image:
+        type: string
+        default: ghcr.io/stuttgart-things/sthings-terraform:1.9.8
+        required: false
+    outputs:
+      tf-output:
+        description: terraform output
+        value: ${{ jobs.Execute-Terraform.outputs.tf-output }}
+      dir-exists:
+        description: dir exists
+        value: ${{ jobs.Check-Directory.outputs.dir_exists }}
+
+jobs:
+  Check-Directory:
+    runs-on: ${{ inputs.runs-on }}
+    outputs:
+      dir_exists: ${{ steps.check-directory.outputs.DIR_EXISTS }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Check if directory exists
+        id: check-directory
+        run: |
+          if test -d "${{ inputs.folder }}"; then
+            echo "DIR_EXISTS=true"  >> "$GITHUB_OUTPUT"
+          else
+            echo "DIR_EXISTS=false" >> "$GITHUB_OUTPUT"
+          fi
+        shell: bash
+
+  Execute-Terraform:
+    needs: Check-Directory
+    if: ${{ needs.Check-Directory.outputs.dir_exists == 'true' }}
+    outputs:
+      tf-output: ${{ steps.tf_output.outputs.TF_OUTPUT }}
+    runs-on: ${{ inputs.runs-on }}
+    environment: ${{ inputs.environment-name }}
+    container:
+      image: ${{ inputs.working-image }}
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.S3_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.S3_SECRET_ACCESS_KEY }}
+      VAULT_ADDR: ${{ secrets.VAULT_ADDR }}
+      VAULT_AUTH_METHOD: ${{ secrets.VAULT_AUTH_METHOD }}
+      VAULT_NAMESPACE: ${{ secrets.VAULT_NAMESPACE }}
+      VAULT_ROLE_ID: ${{ secrets.VAULT_ROLE_ID }}
+      VAULT_SECRET_ID: ${{ secrets.VAULT_SECRET_ID }}
+      TFVARS_FILE: ${{ inputs.folder }}/terraform.tfvars
+      FILE_SECRETS_FILE: ${{ inputs.folder }}/file-secrets.yaml
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4.2.2
+        with:
+          fetch-depth: '0'
+          ref: ${{ inputs.branch }}
+
+      # - name: Render terraform.tfvars (if exists)
+      #   id: tfvars-render
+      #   run: |
+      #     if test -f "${TFVARS_FILE}"; then
+
+      #       echo "${TFVARS_FILE} exists."
+      #       values=$(tail -1 ${TFVARS_FILE}| cut -c 3-)
+
+      #       machineshop render \
+      #       --source local \
+      #       --template ${TFVARS_FILE} \
+      #       --output file \
+      #       --values "$values" \
+      #       --destination ${TFVARS_FILE}
+
+      #     fi
+
+      # - name: Get secret files (if paths are existing)
+      #   id: secret-files
+      #   shell: bash
+      #   run: |
+      #     if test -f "${FILE_SECRETS_FILE}"; then
+
+      #       for secret in $(yq eval -o=j ${FILE_SECRETS_FILE} | /usr/bin/jq -cr '.secrets[]'); do
+      #           PATH=$(echo $secret | /usr/bin/jq -r '.path' -)
+      #           TARGET=$(echo $secret | /usr/bin/jq -r '.target' -)
+      #           B64=$(echo $secret | /usr/bin/jq -r '.b64' -)
+      #           echo $PATH $target $b64
+      #           /usr/bin/machineshop get --path ${PATH} --output file --destination ${TARGET} --b64 ${B64}
+      #       done
+
+      #     fi
+
+      # - name: Add variables to terraform.tfvars
+      #   if: "${{ inputs.variables != '' }}"
+      #   run: |
+      #     echo "${{ inputs.variables }}" | tr ';' '\n' | sed 's/\(=\)\([^ >]*\)/\1"\2"/g' | sed "s/'//g"
+      #     vars=$(echo "${{ inputs.variables }}" | tr ';' '\n' | sed 's/\(=\)\([^ >]*\)/\1"\2"/g' | sed "s/'//g")
+      #     printf "%s\n" "${vars[@]}" >> ${TFVARS_FILE}
+      #     cat ${TFVARS_FILE}
+      #   shell: bash
+
+      # - name: Terraform init
+      #   run: |
+      #     if test -d "${{ inputs.folder }}"; then
+
+      #       ls -lta ${{ inputs.folder }}
+      #       terraform --version
+      #       terraform -chdir=${{ inputs.folder }} init
+
+      #     fi
+      #   shell: bash
+
+      # - name: Terraform plan
+      #   run: |
+      #     terraform -chdir=${{ inputs.folder }} plan
+      #   shell: bash
+
+      # - name: Terraform execution
+      #   run: |
+      #     terraform -chdir=${{ inputs.folder }} ${{ inputs.operation }} -auto-approve
+      #   shell: bash
+
+      # - name: Terraform output
+      #   id: tf_output
+      #   if: ${{ (inputs.output == true || inputs.output == 'true') }}
+      #   run: |
+      #     terraform -chdir=${{ inputs.folder }} output > output
+      #     filecontent=$(cat output)
+      #     filecontent=${filecontent#*'"'}
+      #     extraction=${filecontent%'"'*}
+      #     echo $extraction
+
+      #     # SET ENV VARS
+      #     echo "TF_OUTPUT=$(echo ${extraction} | sed 's/ //g')" >> "$GITHUB_OUTPUT"
