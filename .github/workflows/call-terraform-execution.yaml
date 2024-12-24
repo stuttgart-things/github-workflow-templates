@@ -137,15 +137,15 @@ jobs:
           fi
         shell: bash
 
-      # - name: Terraform plan
-      #   run: |
-      #     terraform -chdir=${{ inputs.folder }} plan
-      #   shell: bash
+      - name: Terraform plan
+        run: |
+          terraform -chdir=${{ inputs.folder }} plan
+        shell: bash
 
-      # - name: Terraform execution
-      #   run: |
-      #     terraform -chdir=${{ inputs.folder }} ${{ inputs.operation }} -auto-approve
-      #   shell: bash
+      - name: Terraform execution
+        run: |
+          terraform -chdir=${{ inputs.folder }} ${{ inputs.operation }} -auto-approve
+        shell: bash
 
       # - name: Terraform output
       #   id: tf_output
