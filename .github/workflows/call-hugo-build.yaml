@@ -55,7 +55,7 @@ jobs:
   Sync-Hugo-Dev-Minio:
     name: Sync Minio Dev
     needs: Create-Hugo-Content
-    uses: stuttgart-things/github-workflow-templates/.github/workflows/call-minio-sync.yaml@minio-sync-v1
+    uses: stuttgart-things/github-workflow-templates/.github/workflows/call-minio-sync.yaml@mc2024-05-14
     with:
       folder: hugo-dev
       endpoint: ${{ inputs.s3-endpoint }}
@@ -94,7 +94,7 @@ jobs:
   Sync-Hugo-Public-Minio:
     name: Sync Minio Public
     needs: Build-Hugo-Site
-    uses: stuttgart-things/github-workflow-templates/.github/workflows/call-minio-sync.yaml@minio-sync-v1
+    uses: stuttgart-things/github-workflow-templates/.github/workflows/call-minio-sync.yaml@mc2024-05-14
     with:
       folder: hugo-public
       endpoint: ${{ inputs.s3-endpoint }}
