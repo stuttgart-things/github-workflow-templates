@@ -30,7 +30,7 @@ on:
         type: string
       working-image:
         type: string
-        default: ghcr.io/stuttgart-things/sthings-terraform:1.9.8
+        default: ghcr.io/stuttgart-things/sthings-terraform:1.10.3
         required: false
     outputs:
       tf-output:
@@ -126,16 +126,16 @@ jobs:
       #     cat ${TFVARS_FILE}
       #   shell: bash
 
-      # - name: Terraform init
-      #   run: |
-      #     if test -d "${{ inputs.folder }}"; then
+      - name: Terraform init
+        run: |
+          if test -d "${{ inputs.folder }}"; then
 
-      #       ls -lta ${{ inputs.folder }}
-      #       terraform --version
-      #       terraform -chdir=${{ inputs.folder }} init
+            ls -lta ${{ inputs.folder }}
+            terraform --version
+            terraform -chdir=${{ inputs.folder }} init
 
-      #     fi
-      #   shell: bash
+          fi
+        shell: bash
 
       # - name: Terraform plan
       #   run: |
