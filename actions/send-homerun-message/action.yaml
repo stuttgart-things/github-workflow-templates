@@ -1,0 +1,30 @@
+---
+name: "Curl in Container Action"
+description: "Runs a curl command inside a container"
+inputs:
+  url:
+    description: "The URL to send the curl request to"
+    required: true
+  method:
+    description: "HTTP method (GET, POST, PUT, etc.)"
+    required: true
+    default: "GET"
+  headers:
+    description: "Custom headers for the request"
+    required: false
+    default: ""
+  body:
+    description: "Body for POST/PUT requests"
+    required: false
+runs:
+  using: "composite"
+  steps:
+    - name: Run Curl in Container
+      container:
+        image: curlimages/curl:latest  # Specify container image
+      shell: bash
+      run: |
+        curl -X "${{ inputs.method }}" \
+        -H "${{ inputs.headers }}" \
+        ${{ inputs.body && '--data "${inputs.body}"' || '' }} \
+        "${{ inputs.url }}"
