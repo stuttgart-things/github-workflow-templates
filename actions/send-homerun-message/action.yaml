@@ -3,11 +3,21 @@ name: Send Message To Homerun
 description: Send Message To Homerun w/ curl
 inputs:
   url:
-    description: "homerun url"
+    description: homerun url
     required: true
   secretToken:
-    description: "homerun token"
+    description: homerun token
     required: true
+  title:
+    description: homerun token
+    required: true
+  message:
+    description: homerun message (body)
+    required: true
+  severity:
+    description: homerun message severity
+    required: false
+    default: INFO
 
 runs:
   using: "composite"
@@ -19,9 +29,9 @@ runs:
             -H "Content-Type: application/json" \
             -H "X-Auth-Token: ${{ inputs.secretToken }}" \
             -d '{
-                  "title": "Memory System Alert",
-                  "message": "Memory usage is high",
-                  "severity": "warning",
+                  "title": "${{ inputs.title }}",
+                  "message": "${{ inputs.message }}",
+                  "severity": "${{ inputs.severity }}",
                   "author": "monitoring-system",
                   "timestamp": "2024-5-01T12:00:00Z",
                   "system": "flux",
