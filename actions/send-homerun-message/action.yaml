@@ -18,6 +18,10 @@ inputs:
     description: homerun message severity
     required: false
     default: INFO
+  system:
+    description: source system
+    required: false
+    default: github
 
 runs:
   using: "composite"
@@ -25,6 +29,9 @@ runs:
     - name: Run Curl
       shell: bash
       run: |
+        DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+        URL=https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}
+
         curl -k -X POST "${{ inputs.url }}" \
             -H "Content-Type: application/json" \
             -H "X-Auth-Token: ${{ inputs.secretToken }}" \
@@ -33,11 +40,11 @@ runs:
                   "message": "${{ inputs.message }}",
                   "severity": "${{ inputs.severity }}",
                   "author": "monitoring-system",
-                  "timestamp": "2024-5-01T12:00:00Z",
-                  "system": "flux",
+                  "timestamp": "${DATE}",
+                  "system": "${{ inputs.system }}",
                   "tags": "cpu,usage,alert",
                   "assigneeaddress": "admin@example.com",
                   "assigneename": "Admin",
                   "artifacts": "Admin",
-                  "url": "Admin"
+                  "url": "${URL}"
                 }'
