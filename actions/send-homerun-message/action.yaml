@@ -34,21 +34,24 @@ runs:
       shell: bash
       run: |
         DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-        GH_WF_URL=$(echo https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID})
+        GH_WF_URL="https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
 
         curl -k -X POST "${{ inputs.url }}" \
             -H "Content-Type: application/json" \
             -H "X-Auth-Token: ${{ inputs.secretToken }}" \
-            -d '{
-                  "title": "${{ inputs.title }}",
-                  "message": "${{ inputs.message }}",
-                  "severity": "${{ inputs.severity }}",
-                  "author": "monitoring-system",
-                  "timestamp": "${DATE}",
-                  "system": "${{ inputs.system }}",
-                  "tags": "cpu,usage,alert",
-                  "assigneeaddress": "admin@example.com",
-                  "assigneename": "Admin",
-                  "artifacts": "Admin",
-                  \"url\": \"${GH_WF_URL}\",
-                }'
+            -d "$(cat <<EOF
+        {
+          "title": "${{ inputs.title }}",
+          "message": "${{ inputs.message }}",
+          "severity": "${{ inputs.severity }}",
+          "author": "${GITHUB_ACTOR}",
+          "timestamp": "${DATE}",
+          "system": "${{ inputs.system }}",
+          "tags": "cpu,usage,alert",
+          "assigneeaddress": "admin@example.com",
+          "assigneename": "Admin",
+          "artifacts": "${{ inputs.artifacts }}",
+          "url": "${GH_WF_URL}"
+        }
+        EOF
+        )"
