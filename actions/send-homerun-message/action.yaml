@@ -34,7 +34,7 @@ runs:
       shell: bash
       run: |
         DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-        URL=
+        GH_WF_URL=$(echo https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID})
 
         curl -k -X POST "${{ inputs.url }}" \
             -H "Content-Type: application/json" \
@@ -50,5 +50,5 @@ runs:
                   "assigneeaddress": "admin@example.com",
                   "assigneename": "Admin",
                   "artifacts": "Admin",
-                  "url": "https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+                  \"url\": \"${GH_WF_URL}\",
                 }'
