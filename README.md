@@ -11,7 +11,7 @@ jobs:
     runs-on: ghr-stuttgart-things-skyami-cicd
     steps:
       - name: Send Message To Homerun
-        uses: stuttgart-things/github-workflow-templates/actions/send-homerun-message
+        uses: stuttgart-things/github-workflow-templates/actions/send-homerun-message@main
         with:
           url: "https://homerun.homerun-dev.sthings-vsphere.labul.sva.de/generic"
           secretToken: "${{ secrets.HOMERUN_TOKEN }}" # Pass the secret
