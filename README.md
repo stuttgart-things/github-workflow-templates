@@ -1,6 +1,31 @@
 # github-workflow-templates
 github-workflow-templates
 
+## ACTIONS
+
+<details><summary>SEND MESSAGE TO HOMERUN</summary>
+
+```yaml
+jobs:
+  send-to-homerun:
+    runs-on: ghr-stuttgart-things-skyami-cicd
+    steps:
+      - name: Send Message To Homerun
+        uses: stuttgart-things/github-workflow-templates/actions/send-homerun-message
+        with:
+          url: "https://homerun.homerun-dev.sthings-vsphere.labul.sva.de/generic"
+          secretToken: "${{ secrets.HOMERUN_TOKEN }}" # Pass the secret
+          title: "Test Homerun Title"
+          message: "Test Homerun Message"
+          severity: "INFO"
+          artifacts: "Test Artifact"
+          tags: "github,test"
+          assigneeName: "patrick"
+          assigneeAddress: ""
+```
+
+</details>
+
 
 ## DEV
 
