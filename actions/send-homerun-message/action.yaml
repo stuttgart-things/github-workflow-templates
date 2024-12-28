@@ -26,6 +26,18 @@ inputs:
     description: artifacts
     required: false
     default: none
+  tags:
+    description: tags (comma separated)
+    required: false
+    default: github,actions
+  assigneeName:
+    description: assignee name
+    required: false
+    default: ""
+  assigneeAddress:
+    description: assignee address
+    required: false
+    default: ""
 
 runs:
   using: composite
@@ -47,9 +59,9 @@ runs:
           "author": "${GITHUB_ACTOR}",
           "timestamp": "${DATE}",
           "system": "${{ inputs.system }}",
-          "tags": "cpu,usage,alert",
-          "assigneeaddress": "admin@example.com",
-          "assigneename": "Admin",
+          "tags": "${{ inputs.tags }}",
+          "assigneeaddress": "${{ inputs.assigneeAddress }}",
+          "assigneename": "${{ inputs.assigneeName }}",
           "artifacts": "${{ inputs.artifacts }}",
           "url": "${GH_WF_URL}"
         }
