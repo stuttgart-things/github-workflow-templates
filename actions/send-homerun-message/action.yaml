@@ -22,6 +22,10 @@ inputs:
     description: source system
     required: false
     default: github
+  artifacts:
+    description: artifacts
+    required: false
+    default: none
 
 runs:
   using: composite
@@ -30,7 +34,7 @@ runs:
       shell: bash
       run: |
         DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-        URL=https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}
+        URL=
 
         curl -k -X POST "${{ inputs.url }}" \
             -H "Content-Type: application/json" \
@@ -46,5 +50,5 @@ runs:
                   "assigneeaddress": "admin@example.com",
                   "assigneename": "Admin",
                   "artifacts": "Admin",
-                  "url": "${URL}"
+                  "url": "https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
                 }'
