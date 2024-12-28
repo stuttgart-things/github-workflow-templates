@@ -26,5 +26,5 @@ runs:
       run: |
         curl -X "${{ inputs.method }}" \
         -H "${{ inputs.headers }}" \
-        ${{ inputs.body && '--data "${inputs.body}"' || '' }} \
+        $([ -n "${{ inputs.body }}" ] && echo "-d '${{ inputs.body }}'" || echo "") \
         "${{ inputs.url }}"
