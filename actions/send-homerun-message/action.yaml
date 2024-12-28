@@ -20,8 +20,8 @@ runs:
   using: "composite"
   steps:
     - name: Run Curl in Container
-      container:
-        image: curlimages/curl:latest  # Specify container image
+      # container:
+      #   image: curlimages/curl:latest  # Specify container image
       shell: bash
       run: |
         curl -X "${{ inputs.method }}" \
