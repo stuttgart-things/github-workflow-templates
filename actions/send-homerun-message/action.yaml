@@ -1,10 +1,14 @@
 ---
-name: "Curl in Container Action"
-description: "Runs a curl command inside a container"
+name: Send Message To Homerun
+description: Send Message To Homerun w/ curl
 inputs:
   url:
-    description: "The URL to send the curl request to"
+    description: "homerun url"
     required: true
+  secretToken:
+    description: "homerun token"
+    required: true
+
 runs:
   using: "composite"
   steps:
@@ -13,7 +17,7 @@ runs:
       run: |
         curl -k -X POST "${{ inputs.url }}" \
             -H "Content-Type: application/json" \
-            -H "X-Auth-Token: IhrGeheimerToken" \
+            -H "X-Auth-Token: ${{ inputs.secretToken }}" \
             -d '{
                   "title": "Memory System Alert",
                   "message": "Memory usage is high",
