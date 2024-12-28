@@ -24,7 +24,7 @@ inputs:
     default: github
 
 runs:
-  using: "composite"
+  using: composite
   steps:
     - name: Run Curl
       shell: bash
