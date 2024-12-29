@@ -74,11 +74,34 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4.2.2
 
-      - name: Test code
+      - name: Set homerun defaults
+        run: |
+          echo "SEVERITY=ERROR" >> $GITHUB_ENV
+
+      - name: Start Timer
+        id: start-time
+        run: |
+          echo "Start Time: $(date +%s)" && echo "start=$(date +%s)" >> $GITHUB_ENV
+
+      - name: Build binary
         run: |
           go mod tidy
           CGO_ENABLED=0 go build -buildvcs=false -o ${{ inputs.module-name }}
           du -sh ./${{ inputs.module-name }}
+
+
+      - name: End Timer
+        id: end-time
+        run: |
+          echo "End Time: $(date +%s)" && echo "end=$(date +%s)" >> $GITHUB_ENV
+
+      - name: Calculate Duration
+        run: |
+          duration=$((end - start))
+          echo "Job Duration: ${duration} seconds"
+        env:
+          start: ${{ env.start }}
+          end: ${{ env.end }}
 
       - name: Send Message To Homerun
         uses: stuttgart-things/github-workflow-templates/actions/send-homerun-message@main
@@ -87,7 +110,7 @@ jobs:
           secretToken: "${{ secrets.HOMERUN_TOKEN }}" # Pass the secret
           title: "Test Homerun Title"
           message: "Test Homerun Message"
-          severity: "INFO"
+          severity: "${{ env.SEVERITY }}"
           artifacts: "Test Artifact"
           tags: "github,test"
           assigneeName: "patrick"

@@ -1,6 +1,29 @@
 # github-workflow-templates
 github-workflow-templates
 
+## REUSABLE WORKFLOW CALLS
+
+<details><summary>GOLANG BUILD</summary>
+
+```yaml
+jobs:
+  validate-golang:
+    name: Valdiate Golang
+    uses: stuttgart-things/github-workflow-templates/.github/workflows/call-golang-validation.yaml@main
+    with:
+      module-name: kaeffken
+      environment-name: k8s
+      runs-on: ghr-kaeffken-skyami-cicd
+      golint-version: v1.61.0-alpine
+      golang-version: "1.23.1"
+      accept-linterrors: true
+      accept-failedtests: false
+    secrets: inherit
+```
+
+</details>
+
+
 ## ACTIONS
 
 <details><summary>SEND MESSAGE TO HOMERUN</summary>
