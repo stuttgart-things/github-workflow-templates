@@ -89,21 +89,16 @@ jobs:
           CGO_ENABLED=0 go build -buildvcs=false -o ${{ inputs.module-name }}
           du -sh ./${{ inputs.module-name }}
           echo "SEVERITY=INFO" >> $GITHUB_ENV
-          echo "BINARY_SIZE=$(du -sh ./${{ inputs.module-name }})" >> $GITHUB_ENV
 
       - name: End Timer
         id: end-time
         run: |
           env
           echo "End Time: $(date +%s)" && echo "end=$(date +%s)" >> $GITHUB_ENV
-          duration=$(($(date +%s) - start))
-          echo "BUILD_TIME: ${duration}" >> $GITHUB_ENV
-          echo "Job Duration: ${duration} seconds"
-          echo ${BINARY_SIZE}
+          echo "BUILD_TIME: $(echo $(($(date +%s) - start)))" >> $GITHUB_ENV
         env:
           start: ${{ env.start }}
           end: ${{ env.end }}
-          BINARY_SIZE: ${{ env.BINARY_SIZE }}
 
       - name: Send Message To Homerun
         if: always()

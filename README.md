@@ -1,7 +1,7 @@
 # github-workflow-templates
 github-workflow-templates
 
-## REUSABLE WORKFLOW CALLS
+## REUSABLE WORKFLOW-CALLS
 
 <details><summary>GOLANG BUILD</summary>
 
@@ -23,6 +23,23 @@ jobs:
 
 </details>
 
+<details><summary>YAML LINT</summary>
+
+```yaml
+jobs:
+  yaml-lint:
+    name: Lint yaml files
+    uses: stuttgart-things/github-workflow-templates/.github/workflows/call-yaml-lint.yaml@feature/add-homerun-task-go
+    with:
+      runs-on: ghr-install-configure-docker-skyami-cicd
+      environment-name: k8s
+      continue-error: true
+      yamllint-version: 1
+      lintprofile-path: .yamllint
+      artifact-name: yaml-lint
+```
+
+</details>
 
 ## ACTIONS
 
