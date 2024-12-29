@@ -73,8 +73,22 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4.2.2
+
       - name: Test code
         run: |
           go mod tidy
           CGO_ENABLED=0 go build -buildvcs=false -o ${{ inputs.module-name }}
           du -sh ./${{ inputs.module-name }}
+
+      - name: Send Message To Homerun
+        uses: stuttgart-things/github-workflow-templates/actions/send-homerun-message@main
+        with:
+          url: "https://homerun.homerun-dev.sthings-vsphere.labul.sva.de/generic"
+          secretToken: "${{ secrets.HOMERUN_TOKEN }}" # Pass the secret
+          title: "Test Homerun Title"
+          message: "Test Homerun Message"
+          severity: "INFO"
+          artifacts: "Test Artifact"
+          tags: "github,test"
+          assigneeName: "patrick"
+          assigneeAddress: ""
