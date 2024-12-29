@@ -89,20 +89,22 @@ jobs:
           CGO_ENABLED=0 go build -buildvcs=false -o ${{ inputs.module-name }}
           du -sh ./${{ inputs.module-name }}
           echo "SEVERITY=INFO" >> $GITHUB_ENV
+          echo "BINARY_SIZE=$(du -sh ./${{ inputs.module-name }})" >> $GITHUB_ENV
 
       - name: End Timer
         id: end-time
         run: |
+          env
           echo "End Time: $(date +%s)" && echo "end=$(date +%s)" >> $GITHUB_ENV
           duration=$(($(date +%s) - start))
+          echo "BUILD_TIME: ${duration}" >> $GITHUB_ENV
           echo "Job Duration: ${duration} seconds"
+          echo ${BINARY_SIZE}
         env:
           start: ${{ env.start }}
           end: ${{ env.end }}
+          BINARY_SIZE: ${{ env.BINARY_SIZE }}
 
-      # - name: Calculate Duration
-      #   run: |
-      #     duration=$((end - start))
       - name: Send Message To Homerun
         if: always()
         uses: stuttgart-things/github-workflow-templates/actions/send-homerun-message@main
@@ -110,10 +112,9 @@ jobs:
           url: "https://homerun.homerun-dev.sthings-vsphere.labul.sva.de/generic"
           secretToken: "${{ secrets.HOMERUN_TOKEN }}"
           title: "${{ inputs.module-name }} golang build"
-          message: "${{ inputs.module-name }} golang build"
+          message: "${{ inputs.module-name }} golang build \nBUILD_TIME: ${BUILD_TIME} seconds\n"
           severity: "${{ env.SEVERITY }}"
           artifacts: "${{ inputs.module-name }}"
           tags: "github,${{ inputs.module-name }},golang,build"
-          assigneeName: "patrick"
+          assigneeName: "${GITHUB_ACTOR}"
           assigneeAddress: ""
-          author: "${GITHUB_ACTOR}"
