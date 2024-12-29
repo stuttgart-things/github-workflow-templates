@@ -93,9 +93,10 @@ jobs:
       - name: End Timer
         id: end-time
         run: |
-          env
           echo "End Time: $(date +%s)" && echo "end=$(date +%s)" >> $GITHUB_ENV
-          echo "BUILD_TIME: $(echo $(($(date +%s) - start)))" >> $GITHUB_ENV
+          duration=$(($(date +%s) - start))
+
+          echo "BUILD_TIME=${duration}" >> $GITHUB_ENV
         env:
           start: ${{ env.start }}
           end: ${{ env.end }}
@@ -112,4 +113,3 @@ jobs:
           artifacts: "${{ inputs.module-name }}"
           tags: "github,${{ inputs.module-name }},golang,build"
           assigneeName: "${GITHUB_ACTOR}"
-          assigneeAddress: ""
