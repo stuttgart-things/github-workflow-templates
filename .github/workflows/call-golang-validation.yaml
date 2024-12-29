@@ -88,7 +88,7 @@ jobs:
           go mod tidy
           CGO_ENABLED=0 go build -buildvcs=false -o ${{ inputs.module-name }}
           du -sh ./${{ inputs.module-name }}
-
+          echo "SEVERITY=INFO" >> $GITHUB_ENV
 
       - name: End Timer
         id: end-time
@@ -104,14 +104,15 @@ jobs:
           end: ${{ env.end }}
 
       - name: Send Message To Homerun
+        if: always()
         uses: stuttgart-things/github-workflow-templates/actions/send-homerun-message@main
         with:
           url: "https://homerun.homerun-dev.sthings-vsphere.labul.sva.de/generic"
           secretToken: "${{ secrets.HOMERUN_TOKEN }}" # Pass the secret
-          title: "Test Homerun Title"
-          message: "Test Homerun Message"
+          title: "${{ inputs.module-name }} GoLang Build"
+          message: "${{ inputs.module-name }} GoLang Build"
           severity: "${{ env.SEVERITY }}"
-          artifacts: "Test Artifact"
-          tags: "github,test"
+          artifacts: "${{ inputs.module-name }}"
+          tags: "github,${{ inputs.module-name }}"
           assigneeName: "patrick"
           assigneeAddress: ""
