@@ -108,7 +108,7 @@ jobs:
           url: "https://homerun.homerun-dev.sthings-vsphere.labul.sva.de/generic"
           secretToken: "${{ secrets.HOMERUN_TOKEN }}"
           title: "${{ inputs.module-name }} golang build"
-          message: "${{ inputs.module-name }} golang build \nBUILD_TIME: ${BUILD_TIME} seconds\n"
+          message: "${{ inputs.module-name }} golang build BUILD_TIME: ${BUILD_TIME} seconds"
           severity: "${{ env.SEVERITY }}"
           artifacts: "${{ inputs.module-name }}"
           tags: "github,${{ inputs.module-name }},golang,build"
