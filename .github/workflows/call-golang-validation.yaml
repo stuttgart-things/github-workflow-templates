@@ -103,6 +103,7 @@ jobs:
       - name: Set homerun defaults
         run: |
           echo "SEVERITY=ERROR" >> $GITHUB_ENV
+          echo "STATUS=FAILED" >> $GITHUB_ENV
           echo "Start Time: $(date +%s)" && echo "start=$(date +%s)" >> $GITHUB_ENV
 
       - name: Build go binary
@@ -116,6 +117,7 @@ jobs:
         run: |
           duration=$(($(date +%s) - start))
           echo "BUILD_TIME=${duration}" >> $GITHUB_ENV
+          echo "STATUS=SUCCESS" >> $GITHUB_ENV
         env:
           start: ${{ env.start }}
 
@@ -125,8 +127,8 @@ jobs:
         with:
           url: "https://homerun.homerun-dev.sthings-vsphere.labul.sva.de/generic"
           secretToken: "${{ secrets.HOMERUN_TOKEN }}"
-          title: "${{ inputs.module-name }} golang build"
-          message: "${{ inputs.module-name }} golang build BUILD-TIME: ${BUILD_TIME} seconds REPO: https://github.com/${GITHUB_REPOSITORY}"
+          title: "${{ inputs.module-name }} Golang build ${{ env.STATUS }}"
+          message: "${{ inputs.module-name }} Golang build BUILD-TIME: ${BUILD_TIME} seconds REPO: https://github.com/${GITHUB_REPOSITORY}"
           severity: "${{ env.SEVERITY }}"
           artifacts: "${{ inputs.module-name }}"
           tags: "github,${{ inputs.module-name }},golang,build"
