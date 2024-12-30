@@ -45,9 +45,27 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4.2.2
 
+      - name: Set homerun defaults
+        run: |
+          echo "SEVERITY=ERROR" >> $GITHUB_ENV
+          echo "STATUS=FAILED" >> $GITHUB_ENV
+
       - name: Lint golang code
         run: |
           golangci-lint run --timeout=${{ inputs.timeout-minutes }}
+
+      - name: Send Message To Homerun
+        if: always()
+        uses: stuttgart-things/github-workflow-templates/actions/send-homerun-message@main
+        with:
+          url: "https://homerun.homerun-dev.sthings-vsphere.labul.sva.de/generic"
+          secretToken: "${{ secrets.HOMERUN_TOKEN }}"
+          title: "${{ inputs.module-name }} golang lint ${{ env.STATUS }}"
+          message: "${{ inputs.module-name }} golang lint ${{ env.STATUS }} ${{ github.event.repository.name }}"
+          severity: "${{ env.SEVERITY }}"
+          artifacts: "${{ inputs.module-name }}"
+          tags: "github,${{ inputs.module-name }},golang,lint"
+          assigneeName: "${GITHUB_ACTOR}"
 
   Test-Go:
     runs-on: ${{ inputs.runs-on }}
@@ -72,7 +90,7 @@ jobs:
       - name: Set homerun values
         run: |
           duration=$(($(date +%s) - start))
-          echo "TEST_TIME=${duration}" >> $GITHUB_ENV
+          echo "TEST_TIME=$(echo $duration)" >> $GITHUB_ENV
         env:
           start: ${{ env.start }}
 
