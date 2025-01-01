@@ -86,8 +86,8 @@ jobs:
         with:
           url: "https://homerun.homerun-dev.sthings-vsphere.labul.sva.de/generic"
           secretToken: "${{ secrets.HOMERUN_TOKEN }}"
-          title: "[GOLANG][TEST]-${{ inputs.module-name }}-${{ github.head_ref || github.ref_name }}-${{ env.STATUS }}"
-          message: "${{ inputs.module-name }} TEST-TIME: ${BUILD_TIME}seconds REPO: https://github.com/${GITHUB_REPOSITORY} BRANCH: ${{ github.head_ref || github.ref_name }}"
+          title: "[GOLANG][TEST]-${{ inputs.module-name }}-${{ env.STATUS }}"
+          message: "TEST-TIME: ${TEST_TIME}seconds BINARY: ${{ inputs.module-name }} BRANCH: ${{ github.head_ref || github.ref_name }} COMMIT: ${{ github.event.head_commit.message }} REPO: https://github.com/${GITHUB_REPOSITORY}"
           severity: "${{ env.SEVERITY }}"
           artifacts: "${{ inputs.module-name }}"
           tags: "github,${{ inputs.module-name }},golang,test"
@@ -130,8 +130,8 @@ jobs:
         with:
           url: "https://homerun.homerun-dev.sthings-vsphere.labul.sva.de/generic"
           secretToken: "${{ secrets.HOMERUN_TOKEN }}"
-          title: "[GOLANG][BUILD]-${{ inputs.module-name }}-${{ github.head_ref || github.ref_name }}-${{ env.STATUS }}"
-          message: "${{ inputs.module-name }} BUILD-TIME: ${BUILD_TIME}seconds REPO: https://github.com/${GITHUB_REPOSITORY} BRANCH: ${{ github.head_ref || github.ref_name }}"
+          title: "[GOLANG][BUILD]-${{ inputs.module-name }}-${{ env.STATUS }}"
+          message: "BUILD-TIME: ${BUILD_TIME}seconds BINARY: ${{ inputs.module-name }} BRANCH: ${{ github.head_ref || github.ref_name }} COMMIT: ${{ github.event.head_commit.message }} REPO: https://github.com/${GITHUB_REPOSITORY}"
           severity: "${{ env.SEVERITY }}"
           artifacts: "${{ inputs.module-name }}"
           tags: "github,${{ inputs.module-name }},golang,build"
