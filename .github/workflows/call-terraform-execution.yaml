@@ -76,6 +76,7 @@ jobs:
       VAULT_ROLE_ID: ${{ secrets.VAULT_ROLE_ID }}
       VAULT_SECRET_ID: ${{ secrets.VAULT_SECRET_ID }}
       TFVARS_FILE: ${{ inputs.folder }}/terraform.tfvars
+      TFVARS_FILE_TEMPLATE: ${{ inputs.folder }}/terraform.tfvars.tpl
       FILE_SECRETS_FILE: ${{ inputs.folder }}/file-secrets.yaml
     steps:
       - name: Checkout code
@@ -84,78 +85,88 @@ jobs:
           fetch-depth: '0'
           ref: ${{ inputs.branch }}
 
-      - name: Render terraform.tfvars (if exists)
-        id: tfvars-render
+      - name: Render terraform.tfvars.tpl (if exists)
+        id: tfvars-template-render
         run: |
-          if test -f "${TFVARS_FILE}"; then
+          if test -f "${TFVARS_FILE_TEMPLATE}"; then
 
-            echo "${TFVARS_FILE} exists."
-            values=$(tail -1 ${TFVARS_FILE}| cut -c 3-)
-
-            machineshop render \
-            --source local \
-            --template ${TFVARS_FILE} \
-            --output file \
-            --values "$values" \
-            --destination ${TFVARS_FILE}
+            echo "${TFVARS_FILE_TEMPLATE} exists."
 
           fi
 
-      - name: Get secret files (if paths are existing)
-        id: secret-files
-        shell: bash
-        run: |
-          if test -f "${FILE_SECRETS_FILE}"; then
 
-            for secret in $(yq eval -o=j ${FILE_SECRETS_FILE} | /usr/bin/jq -cr '.secrets[]'); do
-                PATH=$(echo $secret | /usr/bin/jq -r '.path' -)
-                TARGET=$(echo $secret | /usr/bin/jq -r '.target' -)
-                B64=$(echo $secret | /usr/bin/jq -r '.b64' -)
-                echo $PATH $target $b64
-                machineshop get --path ${PATH} --output file --destination ${TARGET} --b64 ${B64}
-             done
+      # - name: Render terraform.tfvars (if exists)
+      #   id: tfvars-render
+      #   run: |
+      #     if test -f "${TFVARS_FILE}"; then
 
-          fi
+      #       echo "${TFVARS_FILE} exists."
+      #       values=$(tail -1 ${TFVARS_FILE}| cut -c 3-)
 
-      - name: Add variables to terraform.tfvars
-        if: "${{ inputs.variables != '' }}"
-        run: |
-          echo "${{ inputs.variables }}" | tr ';' '\n' | sed 's/\(=\)\([^ >]*\)/\1"\2"/g' | sed "s/'//g"
-          vars=$(echo "${{ inputs.variables }}" | tr ';' '\n' | sed 's/\(=\)\([^ >]*\)/\1"\2"/g' | sed "s/'//g")
-          printf "%s\n" "${vars[@]}" >> ${TFVARS_FILE}
-          cat ${TFVARS_FILE}
-        shell: bash
+      #       machineshop render \
+      #       --source local \
+      #       --template ${TFVARS_FILE} \
+      #       --output file \
+      #       --values "$values" \
+      #       --destination ${TFVARS_FILE}
 
-      - name: Terraform init
-        run: |
-          if test -d "${{ inputs.folder }}"; then
+      #     fi
 
-            ls -lta ${{ inputs.folder }}
-            terraform --version
-            terraform -chdir=${{ inputs.folder }} init
+      # - name: Get secret files (if paths are existing)
+      #   id: secret-files
+      #   shell: bash
+      #   run: |
+      #     if test -f "${FILE_SECRETS_FILE}"; then
 
-          fi
-        shell: bash
+      #       for secret in $(yq eval -o=j ${FILE_SECRETS_FILE} | /usr/bin/jq -cr '.secrets[]'); do
+      #           PATH=$(echo $secret | /usr/bin/jq -r '.path' -)
+      #           TARGET=$(echo $secret | /usr/bin/jq -r '.target' -)
+      #           B64=$(echo $secret | /usr/bin/jq -r '.b64' -)
+      #           echo $PATH $target $b64
+      #           machineshop get --path ${PATH} --output file --destination ${TARGET} --b64 ${B64}
+      #        done
 
-      - name: Terraform plan
-        run: |
-          terraform -chdir=${{ inputs.folder }} plan
-        shell: bash
+      #     fi
 
-      - name: Terraform execution
-        run: |
-          terraform -chdir=${{ inputs.folder }} ${{ inputs.operation }} -auto-approve
-        shell: bash
+      # - name: Add variables to terraform.tfvars
+      #   if: "${{ inputs.variables != '' }}"
+      #   run: |
+      #     echo "${{ inputs.variables }}" | tr ';' '\n' | sed 's/\(=\)\([^ >]*\)/\1"\2"/g' | sed "s/'//g"
+      #     vars=$(echo "${{ inputs.variables }}" | tr ';' '\n' | sed 's/\(=\)\([^ >]*\)/\1"\2"/g' | sed "s/'//g")
+      #     printf "%s\n" "${vars[@]}" >> ${TFVARS_FILE}
+      #     cat ${TFVARS_FILE}
+      #   shell: bash
 
-      - name: Terraform output
-        id: tf_output
-        if: ${{ (inputs.output == true || inputs.output == 'true') }}
-        run: |
-          terraform -chdir=${{ inputs.folder }} output > output
-          filecontent=$(cat output)
-          filecontent=${filecontent#*'"'}
-          extraction=${filecontent%'"'*}
-          echo $extraction
+      # - name: Terraform init
+      #   run: |
+      #     if test -d "${{ inputs.folder }}"; then
 
-          # SET ENV VARS
-          echo "TF_OUTPUT=$(echo ${extraction} | sed 's/ //g')" >> "$GITHUB_OUTPUT"
+      #       ls -lta ${{ inputs.folder }}
+      #       terraform --version
+      #       terraform -chdir=${{ inputs.folder }} init
+
+      #     fi
+      #   shell: bash
+
+      # - name: Terraform plan
+      #   run: |
+      #     terraform -chdir=${{ inputs.folder }} plan
+      #   shell: bash
+
+      # - name: Terraform execution
+      #   run: |
+      #     terraform -chdir=${{ inputs.folder }} ${{ inputs.operation }} -auto-approve
+      #   shell: bash
+
+      # - name: Terraform output
+      #   id: tf_output
+      #   if: ${{ (inputs.output == true || inputs.output == 'true') }}
+      #   run: |
+      #     terraform -chdir=${{ inputs.folder }} output > output
+      #     filecontent=$(cat output)
+      #     filecontent=${filecontent#*'"'}
+      #     extraction=${filecontent%'"'*}
+      #     echo $extraction
+
+      #     # SET ENV VARS
+      #     echo "TF_OUTPUT=$(echo ${extraction} | sed 's/ //g')" >> "$GITHUB_OUTPUT"

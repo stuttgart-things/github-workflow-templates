@@ -3,6 +3,31 @@ github-workflow-templates
 
 ## REUSABLE WORKFLOW-CALLS
 
+<details><summary>WORFKLOW-FOLDER</summary>
+
+```bash
+mkdir -p .github/workflows
+```
+
+</details>
+
+<details><summary>TRIGGER</summary>
+
+```yaml
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - 'main'
+      - 'feature/**'
+      - 'fix/**'
+  pull_request:
+    types: [opened, reopened]
+```
+
+</details>
+
+
 <details><summary>GOLANG BUILD</summary>
 
 ```yaml
