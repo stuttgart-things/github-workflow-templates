@@ -154,10 +154,10 @@ jobs:
           url: "https://homerun.homerun-dev.sthings-vsphere.labul.sva.de/generic"
           secretToken: "${{ secrets.HOMERUN_TOKEN }}"
           title: "[TERRAFORM][${{ inputs.operation }}]-${{ inputs.folder }}-${{ env.STATUS }}"
-          message: "COMMIT: ${{ github.event.head_commit.message }} BRANCH: ${{ github.head_ref || github.ref_name }} FOLDER: ${{ inputs.folder }} EXECUTION-TIME: ${EXECUTION_TIME}s REPO: https://github.com/${GITHUB_REPOSITORY}"
+          message: "COMMIT: ${{ github.event.head_commit.message }} BRANCH: ${{ github.event.head_ref || github.event.ref_name }} FOLDER: ${{ inputs.folder }} EXECUTION-TIME: ${EXECUTION_TIME}s REPO: https://github.com/${GITHUB_REPOSITORY}"
           severity: "${{ env.SEVERITY }}"
           artifacts: "${{ inputs.folder }}"
-          tags: "github,${{ inputs.folder }},golang,build"
+          tags: "github,${{ inputs.folder }},terraform,${{ inputs.operation }}"
           assigneeName: "${GITHUB_ACTOR}"
 
 
