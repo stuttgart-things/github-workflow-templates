@@ -97,13 +97,13 @@ jobs:
             echo "${TFVARS_FILE_TEMPLATE} exists."
             machineshop render \
             --source local \
-            --template terraform.tfvars.tpl \
-            --secrets=secret-vars.yaml \
+            --template ${TFVARS_FILE_TEMPLATE} \
+            --secrets=${{ inputs.folder }}/secret-vars.yaml \
             --brackets square \
-            --destination terraform.tfvars \
+            --destination ${{ inputs.folder }}/terraform.tfvars \
             --output file
 
-            cat terraform.tfvars
+            cat ${{ inputs.folder }}/terraform.tfvars
 
           fi
 
