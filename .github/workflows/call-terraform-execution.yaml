@@ -93,7 +93,6 @@ jobs:
         id: tfvars-template-render
         run: | # pragma: allowlist secret
           if test -f "${TFVARS_FILE_TEMPLATE}"; then
-
             echo "${TFVARS_FILE_TEMPLATE} exists."
             machineshop render \
             --source local \
@@ -102,10 +101,16 @@ jobs:
             --brackets square \
             --destination ${{ inputs.folder }}/terraform.tfvars \
             --output file
-
-            cat ${{ inputs.folder }}/terraform.tfvars
-
           fi
+
+      - name: Terraform init
+        run: | # pragma: allowlist secret
+          ls -lta ${{ inputs.folder }}
+          terraform --version
+          export AWS_ACCESS_KEY_ID=$(machineshop get --system=sops --path=${{ inputs.folder }}/secret-vars.yaml:AWS_ACCESS_KEY_ID | tail -n 1)
+          export AWS_SECRET_ACCESS_KEY=$(machineshop get --system=sops --path=${{ inputs.folder }}/secret-vars.yaml:AWS_SECRET_ACCESS_KEY | tail -n 1)
+          terraform -chdir=${{ inputs.folder }} init
+        shell: bash
 
       # - name: Render terraform.tfvars (if exists)
       #   id: tfvars-render
@@ -149,16 +154,7 @@ jobs:
       #     cat ${TFVARS_FILE}
       #   shell: bash
 
-      # - name: Terraform init
-      #   run: |
-      #     if test -d "${{ inputs.folder }}"; then
 
-      #       ls -lta ${{ inputs.folder }}
-      #       terraform --version
-      #       terraform -chdir=${{ inputs.folder }} init
-
-      #     fi
-      #   shell: bash
 
       # - name: Terraform plan
       #   run: |
