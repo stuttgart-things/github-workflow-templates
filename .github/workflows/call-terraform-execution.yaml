@@ -28,6 +28,10 @@ on:
       runs-on:
         required: true
         type: string
+      send-to-homerun:
+        required: false
+        type: boolean
+        default: true
       working-image:
         type: string
         default: ghcr.io/stuttgart-things/sthings-terraform:1.10.3-2.6.15
@@ -89,6 +93,13 @@ jobs:
           fetch-depth: '0'
           ref: ${{ inputs.branch }}
 
+      - name: Set homerun defaults
+        if: ${{ inputs.send-to-homerun }}
+        run: |
+          echo "SEVERITY=ERROR" >> $GITHUB_ENV
+          echo "STATUS=FAILED" >> $GITHUB_ENV
+          echo "Start Time: $(date +%s)" && echo "start=$(date +%s)" >> $GITHUB_ENV
+
       - name: Render terraform.tfvars.tpl (if exists)
         id: tfvars-template-render
         run: | # pragma: allowlist secret
@@ -107,7 +118,7 @@ jobs:
         run: |
           ls -lta ${{ inputs.folder }}
           terraform --version
-          shell: bash
+        shell: bash
 
       - name: Terraform init
         run: | # pragma: allowlist secret
@@ -126,6 +137,28 @@ jobs:
           terraform -chdir=${{ inputs.folder }} ${{ inputs.operation }} -auto-approve
         shell: bash
 
+      - name: Set homerun values
+        if: ${{ inputs.send-to-homerun }}
+        run: |
+          duration=$(($(date +%s) - start))
+          echo "EXECUTION_TIME=${duration}" >> $GITHUB_ENV
+          echo "STATUS=SUCCESS" >> $GITHUB_ENV
+          echo "SEVERITY=SUCCESS" >> $GITHUB_ENV
+        env:
+          start: ${{ env.start }}
+
+      - name: Send Message To Homerun
+        if: always() && ${{ inputs.send-to-homerun }}
+        uses: stuttgart-things/github-workflow-templates/actions/send-homerun-message@main
+        with:
+          url: "https://homerun.homerun-dev.sthings-vsphere.labul.sva.de/generic"
+          secretToken: "${{ secrets.HOMERUN_TOKEN }}"
+          title: "[TERRAFORM][${{ inputs.operation }}]-${{ inputs.folder }}-${{ env.STATUS }}"
+          message: "COMMIT: ${{ github.event.head_commit.message }} BRANCH: ${{ github.head_ref || github.ref_name }} FOLDER: ${{ inputs.folder }} EXECUTION-TIME: ${EXECUTION_TIME}s REPO: https://github.com/${GITHUB_REPOSITORY}"
+          severity: "${{ env.SEVERITY }}"
+          artifacts: "${{ inputs.folder }}"
+          tags: "github,${{ inputs.folder }},golang,build"
+          assigneeName: "${GITHUB_ACTOR}"
 
 
       # - name: Render terraform.tfvars (if exists)
