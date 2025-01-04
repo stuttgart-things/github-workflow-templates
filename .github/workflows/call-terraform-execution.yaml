@@ -30,7 +30,7 @@ on:
         type: string
       working-image:
         type: string
-        default: ghcr.io/stuttgart-things/sthings-terraform:1.10.3
+        default: ghcr.io/stuttgart-things/sthings-terraform:1.10.3-2.6.15
         required: false
     outputs:
       tf-output:
@@ -91,6 +91,7 @@ jobs:
           if test -f "${TFVARS_FILE_TEMPLATE}"; then
 
             echo "${TFVARS_FILE_TEMPLATE} exists."
+            machineshop version
 
           fi
 
