@@ -1,0 +1,42 @@
+---
+name: Release Golang Module
+on:
+  workflow_call:
+    inputs:
+      runs-on:
+        required: false
+        type: string
+        default: dagger
+      collection-folder:
+        required: true
+        type: string
+      branch-name:
+        required: false
+        default: main
+        type: string
+      dagger-module-version:
+        required: false
+        type: string
+        default: v0.1.1
+jobs:
+  collection-build:
+    name: Collection Build
+    runs-on: ${{ inputs.runs-on }}
+    steps:
+      - name: Checkout Project
+        uses: actions/checkout@v4.2.2
+        with:
+          fetch-depth: '0'
+          ref: ${{ inputs.branch-name }}
+
+      - name: Init Collection structure
+        uses: dagger/dagger-for-github@v7
+        with:
+          version: "0.15.1"
+          verb: call
+          args: init-collection --src collections/${{ inputs.collection-folder }} --progress plain export --path=/tmp/test
+          module: github.com/stuttgart-things/dagger/ansible@${{ inputs.dagger-module-version }}
+
+      - name: List collection build
+        run: |
+          ls -lta /tmp/test
