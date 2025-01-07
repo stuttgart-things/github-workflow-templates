@@ -40,7 +40,7 @@ jobs:
         with:
           version: "0.15.1"
           verb: call
-          args: init-collection --src collections/${{ inputs.collection-folder }} --progress plain export --path=/tmp/test
+          args: init-collection --src ${{ inputs.collection-folder }} --progress plain export --path=/tmp/test
           module: github.com/stuttgart-things/dagger/ansible@${{ inputs.dagger-module-version }}
 
       - name: List collection build
