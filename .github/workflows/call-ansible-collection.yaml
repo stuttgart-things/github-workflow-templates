@@ -1,5 +1,5 @@
 ---
-name: Release Golang Module
+name: Ansible collection build
 on:
   workflow_call:
     inputs:
@@ -17,7 +17,7 @@ on:
       dagger-module-version:
         required: false
         type: string
-        default: v0.1.1
+        default: v0.2.0
       environment-name:
         required: false
         type: string
@@ -38,11 +38,10 @@ jobs:
       - name: Init Collection structure
         uses: dagger/dagger-for-github@v7
         with:
-          version: "0.15.1"
+          version: "0.15.2"
           verb: call
-          args: init-collection --src ${{ inputs.collection-directory }} --progress plain export --path=/tmp/test
+          args: run-collection-build-pipeline --src ${{ inputs.collection-directory }} --progress plain export --path=/tmp/build
           module: github.com/stuttgart-things/dagger/ansible@${{ inputs.dagger-module-version }}
 
-      - name: List collection build
-        run: |
-          ls -lta /tmp/test
+      - name: List Collection
+        run: ls -lta /tmp/build
