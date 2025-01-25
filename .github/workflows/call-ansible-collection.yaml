@@ -40,8 +40,9 @@ jobs:
         with:
           version: "0.15.2"
           verb: call
-          args: run-collection-build-pipeline --src ${{ inputs.collection-directory }} --progress plain export --path=/tmp/build
+          args: run-collection-build-pipeline --src ${{ inputs.collection-directory }} --progress plain export --path=/tmp/build/${{ inputs.collection-directory }}
           module: github.com/stuttgart-things/dagger/ansible@${{ inputs.dagger-module-version }}
 
       - name: List Collection
-        run: ls -lta /tmp/build
+        run: |
+          ls /build/tesst/*${{ inputs.collection-directory }}*.tar.gz | tail -n 1
