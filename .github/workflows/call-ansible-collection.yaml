@@ -35,7 +35,7 @@ jobs:
           fetch-depth: '0'
           ref: ${{ inputs.branch-name }}
 
-      - name: Init Collection structure
+      - name: Build Collection
         uses: dagger/dagger-for-github@v7
         with:
           version: "0.15.2"
@@ -43,20 +43,21 @@ jobs:
           args: run-collection-build-pipeline --src ${{ inputs.collection-directory }} --progress plain export --path=/tmp/${{ inputs.collection-directory }}
           module: github.com/stuttgart-things/dagger/ansible@${{ inputs.dagger-module-version }}
 
-      - name: List Collection
+      - name: Check collection artifact
         run: |
           COLLECTION_PACKAGE_PATH=$(ls /tmp/${{ inputs.collection-directory }}/*.tar.gz | tail -n 1)
           COLLECTION_PACKAGE_NAME=$(basename "${COLLECTION_PACKAGE_PATH}")
 
-          echo ${COLLECTION_PACKAGE_PATH}
           echo ${COLLECTION_PACKAGE_NAME}
+          echo ${COLLECTION_PACKAGE_PATH}
 
+          echo "COLLECTION_PACKAGE_NAME=$(echo ${COLLECTION_PACKAGE_NAME})" >> $GITHUB_ENV
           echo "COLLECTION_PACKAGE_PATH=$(echo ${COLLECTION_PACKAGE_PATH})" >> $GITHUB_ENV
         shell: bash
 
-      # - name: Upload collection
-      #   id: upload
-      #   uses: actions/upload-artifact@v4.6.0
-      #   with:
-      #     name: ${{ env.COLLECTION_PACKAGE }}
-      #     path: ${{ env.COLLECTION_PACKAGE_PATH }}
+      - name: Upload collection
+        id: upload
+        uses: actions/upload-artifact@v4.6.0
+        with:
+          name: ${{ env.COLLECTION_PACKAGE_NAME }}
+          path: ${{ env.COLLECTION_PACKAGE_PATH }}
