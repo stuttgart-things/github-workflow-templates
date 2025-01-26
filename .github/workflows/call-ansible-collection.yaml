@@ -61,3 +61,16 @@ jobs:
         with:
           name: ${{ env.COLLECTION_PACKAGE_NAME }}
           path: ${{ env.COLLECTION_PACKAGE_PATH }}
+
+      - name: Send Message To Homerun
+        if: always()
+        uses: stuttgart-things/github-workflow-templates/actions/send-homerun-message@main
+        with:
+          url: "https://homerun.homerun-dev.sthings-vsphere.labul.sva.de/generic"
+          secretToken: "${{ secrets.HOMERUN_TOKEN }}"
+          title: "[ANSIBLE][COLLECTION] ${{ env.COLLECTION_PACKAGE_NAME }} build"
+          message: "COMMIT: ${{ github.event.head_commit.message }} BRANCH: ${{ github.head_ref || github.ref_name }} REPO: https://github.com/${GITHUB_REPOSITORY}"
+          severity: "INFO"
+          artifacts: "${{ env.COLLECTION_PACKAGE_NAME }}"
+          tags: "github,ansible,collection"
+          assigneeName: "${GITHUB_ACTOR}"
