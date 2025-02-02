@@ -25,6 +25,8 @@ on:
 
 jobs:
   collection-build:
+    outputs:
+      collection-name: ${{ steps.meta.outputs.COLLECTION_PACKAGE_NAME }}
     name: Collection Build
     runs-on: ${{ inputs.runs-on }}
     environment: ${{ inputs.environment-name }}
@@ -44,6 +46,7 @@ jobs:
           module: github.com/stuttgart-things/dagger/ansible@${{ inputs.dagger-module-version }}
 
       - name: Check collection artifact
+        id: meta
         run: |
           COLLECTION_PACKAGE_PATH=$(ls /tmp/${{ inputs.collection-directory }}/*.tar.gz | tail -n 1)
           COLLECTION_PACKAGE_NAME=$(basename "${COLLECTION_PACKAGE_PATH}")
@@ -52,6 +55,7 @@ jobs:
           echo ${COLLECTION_PACKAGE_PATH}
 
           echo "COLLECTION_PACKAGE_NAME=$(echo ${COLLECTION_PACKAGE_NAME})" >> $GITHUB_ENV
+          echo "COLLECTION_PACKAGE_NAME=$(echo ${COLLECTION_PACKAGE_NAME})" >> $GITHUB_OUTPUT
           echo "COLLECTION_PACKAGE_PATH=$(echo ${COLLECTION_PACKAGE_PATH})" >> $GITHUB_ENV
         shell: bash
 
@@ -81,5 +85,5 @@ jobs:
     with:
       runs-on: dagger
       environment-name: k8s
-      artifact-name: "${{ env.COLLECTION_PACKAGE_NAME }}"
+      artifact-name: ${{ needs.collection-build.outputs.collection-name }}
     secrets: inherit # pragma: allowlist secret
