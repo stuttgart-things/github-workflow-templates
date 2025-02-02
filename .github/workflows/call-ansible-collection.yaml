@@ -74,3 +74,12 @@ jobs:
           artifacts: "${{ env.COLLECTION_PACKAGE_NAME }}"
           tags: "github,ansible,collection"
           assigneeName: "${GITHUB_ACTOR}"
+
+  Release-Collection:
+    needs: collection-build
+    uses: stuttgart-things/github-workflow-templates/.github/workflows/call-release-artifact.yaml@feature/add-homerun-task-go
+    with:
+      runs-on: dagger
+      environment-name: k8s
+      artifact-name: "${{ env.COLLECTION_PACKAGE_NAME }}"
+    secrets: inherit # pragma: allowlist secret

@@ -10,6 +10,10 @@ on:
       artifact-name:
         required: true
         type: string
+      environment-name:
+        required: false
+        type: string
+        default: k8s
 
 jobs:
   release-artifact:
