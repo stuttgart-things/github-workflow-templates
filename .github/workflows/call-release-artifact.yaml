@@ -1,0 +1,30 @@
+---
+name: Release artifact
+on:
+  workflow_call:
+    inputs:
+      runs-on:
+        required: false
+        type: string
+        default: dagger
+      artifact-name:
+        required: true
+        type: string
+
+jobs:
+  release-artifact:
+    name: Release artifact on github
+    runs-on: ${{ inputs.runs-on }}
+    environment: ${{ inputs.environment-name }}
+    steps:
+      - name: Download artifact
+        uses: actions/download-artifact@v4.1.8
+        with:
+          name: ${{ inputs.artifact-name }}
+          path: |-
+            /tmp
+
+      - name: Verify artifact
+        run: |
+          ls -lta /tmp
+        shell: bash
