@@ -37,9 +37,6 @@ jobs:
       - name: Verify artifact
         run: |
           du -sh /tmp/${{ inputs.artifact-name }}
-          printenv
-
-          echo GITHUB_REPOSITORY: $GITHUB_REPOSITORY
         shell: bash
 
       - name: Release Collection
@@ -47,5 +44,5 @@ jobs:
         with:
           version: "0.15.3"
           verb: call
-          args: github-release --token=env:GH_TOKEN --notes "${{ inputs.artifact-name }}" --tag ${{ inputs.artifact-name }} --title "release for ${{ inputs.artifact-name }}" --files "/tmp/${{ inputs.artifact-name }}" --progress plain
+          args: github-release --token=env:GH_TOKEN --group ${GITHUB_REPOSITORY%%/*} --repo ${GITHUB_REPOSITORY#*/} --notes "${{ inputs.artifact-name }}" --tag ${{ inputs.artifact-name }} --title "release for ${{ inputs.artifact-name }}" --files "/tmp/${{ inputs.artifact-name }}" --progress plain
           module: github.com/stuttgart-things/dagger/ansible@${{ inputs.dagger-module-version }}
