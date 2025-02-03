@@ -37,6 +37,9 @@ jobs:
       - name: Verify artifact
         run: |
           du -sh /tmp/${{ inputs.artifact-name }}
+          printenv
+
+          echo GITHUB_REPOSITORY: $GITHUB_REPOSITORY
         shell: bash
 
       - name: Release Collection
