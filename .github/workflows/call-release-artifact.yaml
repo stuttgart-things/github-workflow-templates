@@ -42,5 +42,5 @@ jobs:
         with:
           version: "0.15.3"
           verb: call
-          args: github-release --token=env:GH_TOKEN --notes "test" --tag 09.1.6 --title hello --files "/tmp/${{ inputs.artifact-name }}" --progress plain
+          args: github-release --token=${{ secrets.GH_TOKEN }} --notes "test" --tag 09.1.6 --title hello --files "/tmp/${{ inputs.artifact-name }}" --progress plain
           module: github.com/stuttgart-things/dagger/ansible@${{ inputs.dagger-module-version }}
