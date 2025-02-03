@@ -70,6 +70,7 @@ jobs:
           go mod tidy
           go test ./... -v
           echo "SEVERITY=SUCCESS" >> $GITHUB_ENV
+        shell: bash
 
       - name: Set homerun values
         run: |
