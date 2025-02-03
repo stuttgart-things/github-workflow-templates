@@ -85,5 +85,6 @@ jobs:
     with:
       runs-on: dagger
       environment-name: k8s
+      dagger-module-version: ${{ inputs.dagger-module-version }}
       artifact-name: ${{ needs.collection-build.outputs.collection-name }}
     secrets: inherit # pragma: allowlist secret

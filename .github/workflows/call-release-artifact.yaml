@@ -14,6 +14,10 @@ on:
         required: false
         type: string
         default: k8s
+      dagger-module-version:
+        required: false
+        type: string
+        default: v0.2.0
 
 jobs:
   release-artifact:
@@ -38,12 +42,5 @@ jobs:
         with:
           version: "0.15.3"
           verb: call
-          args: >-
-            github-release
-            --token=env:GH_TOKEN \
-            --progress plain
-            --notes "test"
-            --tag 09.1.6
-            --title hello
-            --files "/tmp/${{ inputs.artifact-name }}"
+          args: github-release --token=env:GH_TOKEN --notes "test" --tag 09.1.6 --title hello --files "/tmp/${{ inputs.artifact-name }}" --progress plain
           module: github.com/stuttgart-things/dagger/ansible@${{ inputs.dagger-module-version }}
