@@ -40,7 +40,7 @@ jobs:
       - name: Build Collection
         uses: dagger/dagger-for-github@v7
         with:
-          version: "0.15.2"
+          version: "0.15.3"
           verb: call
           args: run-collection-build-pipeline --src ${{ inputs.collection-directory }} --progress plain export --path=/tmp/${{ inputs.collection-directory }}
           module: github.com/stuttgart-things/dagger/ansible@${{ inputs.dagger-module-version }}

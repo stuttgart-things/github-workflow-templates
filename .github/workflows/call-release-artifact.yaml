@@ -30,5 +30,20 @@ jobs:
 
       - name: Verify artifact
         run: |
-          ls -lta /tmp
+          du -sh /tmp/${{ inputs.artifact-name }}
         shell: bash
+
+      - name: Release Collection
+        uses: dagger/dagger-for-github@v7
+        with:
+          version: "0.15.3"
+          verb: call
+          args: >-
+            github-release
+            --token=env:GH_TOKEN \
+            --progress plain
+            --notes "test"
+            --tag 09.1.6
+            --title hello
+            --files "/tmp/${{ inputs.artifact-name }}"
+          module: github.com/stuttgart-things/dagger/ansible@${{ inputs.dagger-module-version }}
