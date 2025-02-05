@@ -48,7 +48,7 @@ jobs:
       - name: Check collection artifact
         id: meta
         run: |
-          COLLECTION_PACKAGE_PATH=$(ls /tmp/${{ inputs.collection-directory }}/*.tar.gz | tail -n 1)
+          COLLECTION_PACKAGE_PATH=$(ls --time=birth /tmp/${{ inputs.collection-directory }}/*.tar.gz | head -n 1)
           COLLECTION_PACKAGE_NAME=$(basename "${COLLECTION_PACKAGE_PATH}")
 
           echo ${COLLECTION_PACKAGE_NAME}
