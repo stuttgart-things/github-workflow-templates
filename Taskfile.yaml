@@ -33,6 +33,14 @@ tasks:
         git switch -c ${branch} --track origin/${branch}
         git branch && git status
 
+  switch-local:
+    desc: Switch to local branch
+    cmds:
+      - |
+        branches=$(git branch -a | grep -v 'remotes')
+        branch=$(printf "%s\n" "${branches[@]}" | gum choose)
+        git checkout ${branch} && git pull
+
   check:
     desc: "Run pre-commit hooks"
     cmds:
