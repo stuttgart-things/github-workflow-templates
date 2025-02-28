@@ -93,11 +93,55 @@ jobs:
 
 ## DEV
 
+<details><summary>ALL TASKS</summary>
+
 ```bash
 task: Available tasks for this project:
-* branch:       Create branch from main
-* check:        Run pre-commit hooks
-* commit:       Commit + push code into branch
-* pr:           Create pull request into main
-* tag:          Tag repo
+* branch:              Create branch from main
+* check:               Run pre-commit hooks
+* commit:              Commit + push code into branch
+* pr:                  Create pull request into main
+* switch-local:        Switch to local branch
+* switch-remote:       Switch to remote branch
+* tag:                 Tag repo
+* tasks:               Select a task to run
 ```
+
+</details>
+
+<details><summary>SELECT TASK</summary>
+
+```bash
+task=$(yq e '.tasks | keys' Taskfile.yaml | sed 's/^- //' | gum choose) && task ${task}
+```
+
+</details>
+
+## AUTHORS
+
+```yaml
+---
+authors:
+  - patrick.hermann
+```
+
+
+## LICENSE
+
+<details><summary><b>APACHE 2.0</b></summary>
+
+Copyright 2023 patrick hermann.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+
+</details>
