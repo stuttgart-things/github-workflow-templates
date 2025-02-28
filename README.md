@@ -1,5 +1,70 @@
 # stuttgart-things/github-workflow-templates
 
+## REUSABLE WORKFLOW-CALLS
+
+<details><summary>WORFKLOW-FOLDER</summary>
+
+```bash
+mkdir -p .github/workflows
+```
+
+</details>
+
+<details><summary>TRIGGER</summary>
+
+```yaml
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - 'main'
+      - 'feature/**'
+      - 'fix/**'
+  pull_request:
+    types: [opened, reopened]
+```
+
+</details>
+
+
+<details><summary>GOLANG BUILD</summary>
+
+```yaml
+jobs:
+  validate-golang:
+    name: Valdiate Golang
+    uses: stuttgart-things/github-workflow-templates/.github/workflows/call-golang-validation.yaml@main
+    with:
+      module-name: kaeffken
+      environment-name: k8s
+      runs-on: ghr-kaeffken-skyami-cicd
+      golint-version: v1.61.0-alpine
+      golang-version: "1.23.1"
+      accept-linterrors: true
+      accept-failedtests: false
+    secrets: inherit
+```
+
+</details>
+
+<details><summary>YAML LINT</summary>
+
+```yaml
+jobs:
+  yaml-lint:
+    name: Lint yaml files
+    uses: stuttgart-things/github-workflow-templates/.github/workflows/call-yaml-lint.yaml@feature/add-homerun-task-go
+    with:
+      runs-on: ghr-install-configure-docker-skyami-cicd
+      environment-name: k8s
+      continue-error: true
+      yamllint-version: 1
+      lintprofile-path: .yamllint
+      artifact-name: yaml-lint
+```
+
+</details>
+
 ## ACTIONS
 
 <details><summary>SEND MESSAGE TO HOMERUN</summary>

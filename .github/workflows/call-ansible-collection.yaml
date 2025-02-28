@@ -1,0 +1,90 @@
+---
+name: Ansible collection build
+on:
+  workflow_call:
+    inputs:
+      runs-on:
+        required: false
+        type: string
+        default: dagger
+      collection-directory:
+        required: true
+        type: string
+      branch-name:
+        required: false
+        default: main
+        type: string
+      dagger-module-version:
+        required: false
+        type: string
+        default: v0.2.0
+      environment-name:
+        required: false
+        type: string
+        default: k8s
+
+jobs:
+  collection-build:
+    outputs:
+      collection-name: ${{ steps.meta.outputs.COLLECTION_PACKAGE_NAME }}
+    name: Collection Build
+    runs-on: ${{ inputs.runs-on }}
+    environment: ${{ inputs.environment-name }}
+    steps:
+      - name: Checkout Project
+        uses: actions/checkout@v4.2.2
+        with:
+          fetch-depth: '0'
+          ref: ${{ inputs.branch-name }}
+
+      - name: Build Collection
+        uses: dagger/dagger-for-github@v7
+        with:
+          version: "0.15.3"
+          verb: call
+          args: run-collection-build-pipeline --src ${{ inputs.collection-directory }} --progress plain export --path=/tmp/${{ inputs.collection-directory }}
+          module: github.com/stuttgart-things/dagger/ansible@${{ inputs.dagger-module-version }}
+
+      - name: Check collection artifact
+        id: meta
+        run: |
+          COLLECTION_PACKAGE_PATH=$(ls --time=birth /tmp/${{ inputs.collection-directory }}/*.tar.gz | head -n 1)
+          COLLECTION_PACKAGE_NAME=$(basename "${COLLECTION_PACKAGE_PATH}")
+
+          echo ${COLLECTION_PACKAGE_NAME}
+          echo ${COLLECTION_PACKAGE_PATH}
+
+          echo "COLLECTION_PACKAGE_NAME=$(echo ${COLLECTION_PACKAGE_NAME})" >> $GITHUB_ENV
+          echo "COLLECTION_PACKAGE_NAME=$(echo ${COLLECTION_PACKAGE_NAME})" >> $GITHUB_OUTPUT
+          echo "COLLECTION_PACKAGE_PATH=$(echo ${COLLECTION_PACKAGE_PATH})" >> $GITHUB_ENV
+        shell: bash
+
+      - name: Upload collection
+        id: upload
+        uses: actions/upload-artifact@v4.6.0
+        with:
+          name: ${{ env.COLLECTION_PACKAGE_NAME }}
+          path: ${{ env.COLLECTION_PACKAGE_PATH }}
+
+      - name: Send Message To Homerun
+        if: always()
+        uses: stuttgart-things/github-workflow-templates/actions/send-homerun-message@main
+        with:
+          url: "https://homerun.homerun-dev.sthings-vsphere.labul.sva.de/generic"
+          secretToken: "${{ secrets.HOMERUN_TOKEN }}"
+          title: "[ANSIBLE][COLLECTION] ${{ env.COLLECTION_PACKAGE_NAME }} build"
+          message: "COMMIT: ${{ github.event.head_commit.message }} BRANCH: ${{ github.head_ref || github.ref_name }} REPO: https://github.com/${GITHUB_REPOSITORY}"
+          severity: "INFO"
+          artifacts: "${{ env.COLLECTION_PACKAGE_NAME }}"
+          tags: "github,ansible,collection"
+          assigneeName: "${GITHUB_ACTOR}"
+
+  Release-Collection:
+    needs: collection-build
+    uses: stuttgart-things/github-workflow-templates/.github/workflows/call-release-artifact.yaml@feature/add-homerun-task-go
+    with:
+      runs-on: dagger
+      environment-name: k8s
+      dagger-module-version: ${{ inputs.dagger-module-version }}
+      artifact-name: ${{ needs.collection-build.outputs.collection-name }}
+    secrets: inherit # pragma: allowlist secret

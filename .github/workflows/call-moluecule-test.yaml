@@ -1,0 +1,53 @@
+---
+name: Run Molecule tests
+on:
+  workflow_call:
+    inputs:
+      scenario-names:
+        description: COMMA-SEPARATED LIST OF MOLECULE SCENARIOS E.G. "default","docker"
+        required: false
+        type: string
+        default: "['default']"
+      molecule-workingdir:
+        description: MOLECULE WORKINGDIR
+        required: false
+        type: string
+        default: ""
+      molecule-command:
+        description: MOLECULE COMMAND
+        required: false
+        type: string
+        default: test
+      environment-name:
+        description: ENVIRONMENT NAME
+        required: false
+        type: string
+      runs-on:
+        description: RUNNER NAME
+        required: false
+        type: string
+        default: docker
+
+jobs:
+  molecule:
+    environment: ${{ inputs.environment-name }}
+    runs-on: ${{ inputs.runs-on }}
+    strategy:
+      fail-fast: false
+      matrix:
+        scenario: ${{ fromJSON(inputs.scenario-names)}}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4.2.2
+        with:
+          path: "${{ github.repository }}"
+
+      - name: Molecule
+        uses: gofrolist/molecule-action@v2.7.52
+        with:
+          molecule_command: ${{ inputs.molecule-command }}
+          molecule_args: --scenario-name ${{ matrix.scenario }}
+          molecule_working_dir: ${{ github.repository }}/${{ inputs.molecule-workingdir }}
+        env:
+          ANSIBLE_FORCE_COLOR: '1'

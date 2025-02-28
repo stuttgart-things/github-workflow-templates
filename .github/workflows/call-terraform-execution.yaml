@@ -28,9 +28,13 @@ on:
       runs-on:
         required: true
         type: string
+      send-to-homerun:
+        required: false
+        type: boolean
+        default: true
       working-image:
         type: string
-        default: ghcr.io/stuttgart-things/sthings-terraform:1.10.3
+        default: ghcr.io/stuttgart-things/sthings-terraform:1.10.3-2.6.15
         required: false
     outputs:
       tf-output:
@@ -48,6 +52,9 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: '0'
+          ref: ${{ inputs.branch }}
 
       - name: Check if directory exists
         id: check-directory
@@ -68,14 +75,16 @@ jobs:
     container:
       image: ${{ inputs.working-image }}
     env:
-      AWS_ACCESS_KEY_ID: ${{ secrets.S3_ACCESS_KEY_ID }}
-      AWS_SECRET_ACCESS_KEY: ${{ secrets.S3_SECRET_ACCESS_KEY }}
-      VAULT_ADDR: ${{ secrets.VAULT_ADDR }}
-      VAULT_AUTH_METHOD: ${{ secrets.VAULT_AUTH_METHOD }}
-      VAULT_NAMESPACE: ${{ secrets.VAULT_NAMESPACE }}
-      VAULT_ROLE_ID: ${{ secrets.VAULT_ROLE_ID }}
-      VAULT_SECRET_ID: ${{ secrets.VAULT_SECRET_ID }}
+      # AWS_ACCESS_KEY_ID: ${{ secrets.S3_ACCESS_KEY_ID }}
+      # AWS_SECRET_ACCESS_KEY: ${{ secrets.S3_SECRET_ACCESS_KEY }}
+      # VAULT_ADDR: ${{ secrets.VAULT_ADDR }}
+      # VAULT_AUTH_METHOD: ${{ secrets.VAULT_AUTH_METHOD }}
+      # VAULT_NAMESPACE: ${{ secrets.VAULT_NAMESPACE }}
+      # VAULT_ROLE_ID: ${{ secrets.VAULT_ROLE_ID }}
+      # VAULT_SECRET_ID: ${{ secrets.VAULT_SECRET_ID }}
+      SOPS_AGE_KEY: ${{ secrets.SOPS_AGE_KEY }}
       TFVARS_FILE: ${{ inputs.folder }}/terraform.tfvars
+      TFVARS_FILE_TEMPLATE: ${{ inputs.folder }}/terraform.tfvars.tpl
       FILE_SECRETS_FILE: ${{ inputs.folder }}/file-secrets.yaml
     steps:
       - name: Checkout code
@@ -84,78 +93,137 @@ jobs:
           fetch-depth: '0'
           ref: ${{ inputs.branch }}
 
-      - name: Render terraform.tfvars (if exists)
-        id: tfvars-render
+      - name: Set homerun defaults
+        if: ${{ inputs.send-to-homerun }}
         run: |
-          if test -f "${TFVARS_FILE}"; then
+          echo "SEVERITY=ERROR" >> $GITHUB_ENV
+          echo "STATUS=FAILED" >> $GITHUB_ENV
+          echo "Start Time: $(date +%s)" && echo "start=$(date +%s)" >> $GITHUB_ENV
 
-            echo "${TFVARS_FILE} exists."
-            values=$(tail -1 ${TFVARS_FILE}| cut -c 3-)
-
+      - name: Render terraform.tfvars.tpl (if exists)
+        id: tfvars-template-render
+        run: | # pragma: allowlist secret
+          if test -f "${TFVARS_FILE_TEMPLATE}"; then
+            echo "${TFVARS_FILE_TEMPLATE} exists."
             machineshop render \
             --source local \
-            --template ${TFVARS_FILE} \
-            --output file \
-            --values "$values" \
-            --destination ${TFVARS_FILE}
-
+            --template ${TFVARS_FILE_TEMPLATE} \
+            --secrets=${{ inputs.folder }}/secret-vars.yaml \
+            --brackets square \
+            --destination ${{ inputs.folder }}/terraform.tfvars \
+            --output file
           fi
 
-      - name: Get secret files (if paths are existing)
-        id: secret-files
-        shell: bash
+      - name: Pre Check
         run: |
-          if test -f "${FILE_SECRETS_FILE}"; then
-
-            for secret in $(yq eval -o=j ${FILE_SECRETS_FILE} | /usr/bin/jq -cr '.secrets[]'); do
-                PATH=$(echo $secret | /usr/bin/jq -r '.path' -)
-                TARGET=$(echo $secret | /usr/bin/jq -r '.target' -)
-                B64=$(echo $secret | /usr/bin/jq -r '.b64' -)
-                echo $PATH $target $b64
-                machineshop get --path ${PATH} --output file --destination ${TARGET} --b64 ${B64}
-             done
-
-          fi
-
-      - name: Add variables to terraform.tfvars
-        if: "${{ inputs.variables != '' }}"
-        run: |
-          echo "${{ inputs.variables }}" | tr ';' '\n' | sed 's/\(=\)\([^ >]*\)/\1"\2"/g' | sed "s/'//g"
-          vars=$(echo "${{ inputs.variables }}" | tr ';' '\n' | sed 's/\(=\)\([^ >]*\)/\1"\2"/g' | sed "s/'//g")
-          printf "%s\n" "${vars[@]}" >> ${TFVARS_FILE}
-          cat ${TFVARS_FILE}
+          ls -lta ${{ inputs.folder }}
+          terraform --version
         shell: bash
 
       - name: Terraform init
-        run: |
-          if test -d "${{ inputs.folder }}"; then
+        run: | # pragma: allowlist secret
+          export AWS_ACCESS_KEY_ID=$(machineshop get --system=sops --path=${{ inputs.folder }}/secret-vars.yaml:AWS_ACCESS_KEY_ID | tail -n 1)
+          export AWS_SECRET_ACCESS_KEY=$(machineshop get --system=sops --path=${{ inputs.folder }}/secret-vars.yaml:AWS_SECRET_ACCESS_KEY | tail -n 1)
 
-            ls -lta ${{ inputs.folder }}
-            terraform --version
-            terraform -chdir=${{ inputs.folder }} init
-
-          fi
-        shell: bash
-
-      - name: Terraform plan
-        run: |
+          terraform -chdir=${{ inputs.folder }} init
           terraform -chdir=${{ inputs.folder }} plan
         shell: bash
 
       - name: Terraform execution
-        run: |
+        run: | # pragma: allowlist secret
+          export AWS_ACCESS_KEY_ID=$(machineshop get --system=sops --path=${{ inputs.folder }}/secret-vars.yaml:AWS_ACCESS_KEY_ID | tail -n 1)
+          export AWS_SECRET_ACCESS_KEY=$(machineshop get --system=sops --path=${{ inputs.folder }}/secret-vars.yaml:AWS_SECRET_ACCESS_KEY | tail -n 1)
+
           terraform -chdir=${{ inputs.folder }} ${{ inputs.operation }} -auto-approve
         shell: bash
 
-      - name: Terraform output
-        id: tf_output
-        if: ${{ (inputs.output == true || inputs.output == 'true') }}
+      - name: Set homerun values
+        if: ${{ inputs.send-to-homerun }}
         run: |
-          terraform -chdir=${{ inputs.folder }} output > output
-          filecontent=$(cat output)
-          filecontent=${filecontent#*'"'}
-          extraction=${filecontent%'"'*}
-          echo $extraction
+          duration=$(($(date +%s) - start))
+          echo "EXECUTION_TIME=${duration}" >> $GITHUB_ENV
+          echo "STATUS=SUCCESS" >> $GITHUB_ENV
+          echo "SEVERITY=SUCCESS" >> $GITHUB_ENV
+        env:
+          start: ${{ env.start }}
 
-          # SET ENV VARS
-          echo "TF_OUTPUT=$(echo ${extraction} | sed 's/ //g')" >> "$GITHUB_OUTPUT"
+      - name: Send Message To Homerun
+        if: always() && ${{ inputs.send-to-homerun }}
+        uses: stuttgart-things/github-workflow-templates/actions/send-homerun-message@main
+        with:
+          url: "https://homerun.homerun-dev.sthings-vsphere.labul.sva.de/generic"
+          secretToken: "${{ secrets.HOMERUN_TOKEN }}"
+          title: "[TERRAFORM][${{ inputs.operation }}]-${{ inputs.folder }}-${{ env.STATUS }}"
+          message: "COMMIT: ${{ github.event.head_commit.message }} BRANCH: ${{ github.event.head_ref || github.event.ref_name }} FOLDER: ${{ inputs.folder }} EXECUTION-TIME: ${EXECUTION_TIME}s REPO: https://github.com/${GITHUB_REPOSITORY}"
+          severity: "${{ env.SEVERITY }}"
+          artifacts: "${{ inputs.folder }}"
+          tags: "github,${{ inputs.folder }},terraform,${{ inputs.operation }}"
+          assigneeName: "${GITHUB_ACTOR}"
+
+
+      # - name: Render terraform.tfvars (if exists)
+      #   id: tfvars-render
+      #   run: |
+      #     if test -f "${TFVARS_FILE}"; then
+
+      #       echo "${TFVARS_FILE} exists."
+      #       values=$(tail -1 ${TFVARS_FILE}| cut -c 3-)
+
+      #       machineshop render \
+      #       --source local \
+      #       --template ${TFVARS_FILE} \
+      #       --output file \
+      #       --values "$values" \
+      #       --destination ${TFVARS_FILE}
+
+      #     fi
+
+      # - name: Get secret files (if paths are existing)
+      #   id: secret-files
+      #   shell: bash
+      #   run: |
+      #     if test -f "${FILE_SECRETS_FILE}"; then
+
+      #       for secret in $(yq eval -o=j ${FILE_SECRETS_FILE} | /usr/bin/jq -cr '.secrets[]'); do
+      #           PATH=$(echo $secret | /usr/bin/jq -r '.path' -)
+      #           TARGET=$(echo $secret | /usr/bin/jq -r '.target' -)
+      #           B64=$(echo $secret | /usr/bin/jq -r '.b64' -)
+      #           echo $PATH $target $b64
+      #           machineshop get --path ${PATH} --output file --destination ${TARGET} --b64 ${B64}
+      #        done
+
+      #     fi
+
+      # - name: Add variables to terraform.tfvars
+      #   if: "${{ inputs.variables != '' }}"
+      #   run: |
+      #     echo "${{ inputs.variables }}" | tr ';' '\n' | sed 's/\(=\)\([^ >]*\)/\1"\2"/g' | sed "s/'//g"
+      #     vars=$(echo "${{ inputs.variables }}" | tr ';' '\n' | sed 's/\(=\)\([^ >]*\)/\1"\2"/g' | sed "s/'//g")
+      #     printf "%s\n" "${vars[@]}" >> ${TFVARS_FILE}
+      #     cat ${TFVARS_FILE}
+      #   shell: bash
+
+
+
+      # - name: Terraform plan
+      #   run: |
+      #     terraform -chdir=${{ inputs.folder }} plan
+      #   shell: bash
+
+      # - name: Terraform execution
+      #   run: |
+      #     terraform -chdir=${{ inputs.folder }} ${{ inputs.operation }} -auto-approve
+      #   shell: bash
+
+      # - name: Terraform output
+      #   id: tf_output
+      #   if: ${{ (inputs.output == true || inputs.output == 'true') }}
+      #   run: |
+      #     terraform -chdir=${{ inputs.folder }} output > output
+      #     filecontent=$(cat output)
+      #     filecontent=${filecontent#*'"'}
+      #     extraction=${filecontent%'"'*}
+      #     echo $extraction
+
+      #     # SET ENV VARS
+      #     echo "TF_OUTPUT=$(echo ${extraction} | sed 's/ //g')" >> "$GITHUB_OUTPUT"

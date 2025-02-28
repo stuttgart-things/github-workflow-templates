@@ -1,0 +1,48 @@
+---
+name: Release artifact
+on:
+  workflow_call:
+    inputs:
+      runs-on:
+        required: false
+        type: string
+        default: dagger
+      artifact-name:
+        required: true
+        type: string
+      environment-name:
+        required: false
+        type: string
+        default: k8s
+      dagger-module-version:
+        required: false
+        type: string
+        default: v0.2.1
+
+jobs:
+  release-artifact:
+    name: Release artifact on github
+    runs-on: ${{ inputs.runs-on }}
+    environment: ${{ inputs.environment-name }}
+    env:
+      GH_TOKEN: ${{ secrets.GH_TOKEN }}
+    steps:
+      - name: Download artifact
+        uses: actions/download-artifact@v4.1.8
+        with:
+          name: ${{ inputs.artifact-name }}
+          path: |-
+            /tmp
+
+      - name: Verify artifact
+        run: |
+          du -sh /tmp/${{ inputs.artifact-name }}
+        shell: bash
+
+      - name: Release Collection
+        uses: dagger/dagger-for-github@v7
+        with:
+          version: "0.15.3"
+          verb: call
+          args: github-release --token=env:GH_TOKEN --group ${GITHUB_REPOSITORY%%/*} --repo ${GITHUB_REPOSITORY#*/} --notes "${{ inputs.artifact-name }}" --tag ${{ inputs.artifact-name }} --title "release for ${{ inputs.artifact-name }}" --files "/tmp/${{ inputs.artifact-name }}" --progress plain
+          module: github.com/stuttgart-things/dagger/ansible@${{ inputs.dagger-module-version }}
