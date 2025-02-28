@@ -1,7 +1,5 @@
 # stuttgart-things/github-workflow-templates
 
-github-workflow-templates
-
 ## REUSABLE WORKFLOW-CALLS
 
 <details><summary>WORFKLOW-FOLDER</summary>
