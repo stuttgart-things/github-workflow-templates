@@ -14,7 +14,7 @@ on:
         required: true
         type: string
       golang-version:
-        default: 1.23.1
+        default: 1.24.0
         required: true
         type: string
       timeout-minutes:
