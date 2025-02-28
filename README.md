@@ -1,7 +1,4 @@
-# github-workflow-templates
-github-workflow-templates
-
-test
+# stuttgart-things/github-workflow-templates
 
 ## ACTIONS
 
