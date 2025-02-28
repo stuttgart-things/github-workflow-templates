@@ -9,6 +9,13 @@ vars:
     sh: date +"%y.%m%d.%H%M"
 
 tasks:
+  tasks:
+    desc: Select a task to run
+    cmds:
+      - |
+        task=$(yq e '.tasks | keys' Taskfile.yaml | sed 's/^- //' | gum choose)
+        task ${task}
+
   branch:
     desc: Create branch from main
     cmds:
