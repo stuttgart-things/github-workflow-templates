@@ -81,7 +81,7 @@ jobs:
 
   Release-Collection:
     needs: collection-build
-    uses: stuttgart-things/github-workflow-templates/.github/workflows/call-release-artifact.yaml@feature/add-homerun-task-go
+    uses: stuttgart-things/github-workflow-templates/.github/workflows/call-release-artifact.yaml@main
     with:
       runs-on: dagger
       environment-name: k8s
