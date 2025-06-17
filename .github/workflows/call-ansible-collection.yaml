@@ -14,6 +14,10 @@ on:
         required: false
         default: main
         type: string
+      dagger-version:
+        required: false
+        type: string
+        default: 0.18.10
       dagger-module-version:
         required: false
         type: string
@@ -40,7 +44,7 @@ jobs:
       - name: Build Collection
         uses: dagger/dagger-for-github@8.0.0
         with:
-          version: "0.18.10"
+          version: ${{ inputs.dagger-version }}
           verb: call
           args: run-collection-build-pipeline --src ${{ inputs.collection-directory }} --progress plain export --path=/tmp/${{ inputs.collection-directory }}
           module: github.com/stuttgart-things/dagger/ansible@${{ inputs.dagger-module-version }}
@@ -87,4 +91,5 @@ jobs:
       environment-name: k8s
       dagger-module-version: ${{ inputs.dagger-module-version }}
       artifact-name: ${{ needs.collection-build.outputs.collection-name }}
+      dagger-version: ${{ inputs.dagger-version }}
     secrets: inherit # pragma: allowlist secret
