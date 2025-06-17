@@ -18,7 +18,11 @@ on:
         required: false
         type: string
         default: v0.2.1
-
+      dagger-version:
+        required: false
+        type: string
+        default: "0.18.10"
+        
 jobs:
   release-artifact:
     name: Release artifact on github
@@ -42,7 +46,7 @@ jobs:
       - name: Release Collection
         uses: dagger/dagger-for-github@v7
         with:
-          version: "0.15.3"
+          version: ${{ inputs.dagger-version }}
           verb: call
           args: github-release --token=env:GH_TOKEN --group ${GITHUB_REPOSITORY%%/*} --repo ${GITHUB_REPOSITORY#*/} --notes "${{ inputs.artifact-name }}" --tag ${{ inputs.artifact-name }} --title "release for ${{ inputs.artifact-name }}" --files "/tmp/${{ inputs.artifact-name }}" --progress plain
           module: github.com/stuttgart-things/dagger/ansible@${{ inputs.dagger-module-version }}
