@@ -22,7 +22,7 @@ on:
         required: false
         type: string
         default: "0.18.10"
-        
+
 jobs:
   release-artifact:
     name: Release artifact on github
