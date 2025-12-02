@@ -50,7 +50,7 @@ jobs:
     environment: ${{ inputs.environment-name }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
           ref: ${{ inputs.branch-name }}
