@@ -1,0 +1,55 @@
+---
+name: Terraform Security Scan
+on:
+  workflow_call:
+    inputs:
+      runs-on:
+        required: true
+        type: string
+      environment-name:
+        default: k8s
+        required: true
+        type: string
+      continue-error:
+        default: false
+        required: true
+        type: boolean
+      trivy-version:
+        default: 0.58.2
+        type: string
+      scan-dir:
+        default: .
+        type: string
+      severity:
+        description: "Comma-separated severity levels to fail on"
+        default: HIGH,CRITICAL
+        type: string
+      artifact-name:
+        default: terraform-security
+        type: string
+
+jobs:
+  Terraform-Security:
+    runs-on: ${{ inputs.runs-on }}
+    container:
+      image: aquasec/trivy:${{ inputs.trivy-version }}
+    environment: ${{ inputs.environment-name }}
+    continue-on-error: ${{ inputs.continue-error }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6.0.1
+        with:
+          fetch-depth: '0'
+
+      - name: Run Trivy config scan
+        run: |
+          trivy config \
+            --severity ${{ inputs.severity }} \
+            --format table \
+            ${{ inputs.scan-dir }} | tee ./${{ inputs.artifact-name }}.txt
+
+      - name: Upload scan results
+        uses: actions/upload-artifact@v6.0.0
+        with:
+          name: ${{ inputs.artifact-name }}
+          path: ${{ inputs.artifact-name }}.txt
