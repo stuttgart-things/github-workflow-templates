@@ -1,0 +1,49 @@
+---
+name: Validate Terraform Docs
+on:
+  workflow_call:
+    inputs:
+      runs-on:
+        required: true
+        type: string
+      environment-name:
+        default: k8s
+        required: true
+        type: string
+      continue-error:
+        default: false
+        required: true
+        type: boolean
+      terraform-docs-version:
+        default: 0.19.0
+        type: string
+      output-file:
+        default: README.md
+        type: string
+      output-mode:
+        description: "inject or replace"
+        default: inject
+        type: string
+      working-dir:
+        default: .
+        type: string
+
+jobs:
+  Terraform-Docs:
+    runs-on: ${{ inputs.runs-on }}
+    container:
+      image: quay.io/terraform-docs/terraform-docs:${{ inputs.terraform-docs-version }}
+    environment: ${{ inputs.environment-name }}
+    continue-on-error: ${{ inputs.continue-error }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6.0.1
+        with:
+          fetch-depth: '0'
+
+      - name: Run terraform-docs
+        run: |
+          terraform-docs markdown table \
+            --output-file ${{ inputs.output-file }} \
+            --output-mode ${{ inputs.output-mode }} \
+            ${{ inputs.working-dir }}
