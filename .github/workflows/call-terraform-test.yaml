@@ -1,0 +1,48 @@
+---
+name: Terraform Test
+on:
+  workflow_call:
+    inputs:
+      runs-on:
+        required: true
+        type: string
+      environment-name:
+        default: k8s
+        required: true
+        type: string
+      terraform-version:
+        default: 1.10.5
+        required: true
+        type: string
+      continue-error:
+        default: false
+        required: true
+        type: boolean
+      test-directory:
+        description: "Directory containing tftest.hcl files"
+        default: tests
+        type: string
+      verbose:
+        description: "Enable verbose test output"
+        default: false
+        type: boolean
+
+jobs:
+  Terraform-Test:
+    runs-on: ${{ inputs.runs-on }}
+    container:
+      image: hashicorp/terraform:${{ inputs.terraform-version }}
+    environment: ${{ inputs.environment-name }}
+    continue-on-error: ${{ inputs.continue-error }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6.0.1
+        with:
+          fetch-depth: '0'
+
+      - name: Run terraform test
+        run: |
+          terraform init
+          terraform test \
+            -test-directory=${{ inputs.test-directory }} \
+            ${{ inputs.verbose == 'true' && '-verbose' || '' }}
