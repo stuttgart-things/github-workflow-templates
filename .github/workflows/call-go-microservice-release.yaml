@@ -13,16 +13,16 @@ on:
         default: latest
         type: string
       dagger-release-module:
-        default: github.com/stuttgart-things/dagger/release@v0.82.0
+        default: github.com/stuttgart-things/dagger/release@v0.82.1
         type: string
       dagger-go-module:
-        default: github.com/stuttgart-things/dagger/go@v0.82.0
+        default: github.com/stuttgart-things/dagger/go@v0.82.1
         type: string
       dagger-crane-module:
-        default: github.com/stuttgart-things/dagger/crane@v0.82.0
+        default: github.com/stuttgart-things/dagger/crane@v0.82.1
         type: string
       dagger-kcl-module:
-        default: github.com/stuttgart-things/dagger/kcl@v0.82.0
+        default: github.com/stuttgart-things/dagger/kcl@v0.82.1
         type: string
       releaser-version:
         default: v2.13.3
