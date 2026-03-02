@@ -35,6 +35,26 @@ on:
         required: false
         type: string
         default: linting
+      yaml-config-path:
+        required: false
+        type: string
+        default: ".yamllint"
+      yaml-output-file:
+        required: false
+        type: string
+        default: "yamllint-findings.txt"
+      markdown-config-path:
+        required: false
+        type: string
+        default: ".mdlrc"
+      markdown-output-file:
+        required: false
+        type: string
+        default: "markdown-findings.txt"
+      merged-output-file:
+        required: false
+        type: string
+        default: "all-findings.txt"
       artifact-retention-days:
         required: false
         type: number
@@ -61,7 +81,15 @@ jobs:
           version: ${{ inputs.dagger-version }}
           verb: call
           module: github.com/stuttgart-things/blueprints/repository-linting@${{ inputs.dagger-module-version }}
-          args: validate-multiple-technologies --src ${{ inputs.app-directory }} export --path ${{ inputs.output-file }}
+          args: >-
+            validate-multiple-technologies
+            --src ${{ inputs.app-directory }}
+            --yaml-config-path ${{ inputs.yaml-config-path }}
+            --yaml-output-file ${{ inputs.yaml-output-file }}
+            --markdown-config-path ${{ inputs.markdown-config-path }}
+            --markdown-output-file ${{ inputs.markdown-output-file }}
+            --merged-output-file ${{ inputs.merged-output-file }}
+            export --path ${{ inputs.output-file }}
 
       - name: Display linting results
         if: always()
