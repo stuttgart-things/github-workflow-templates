@@ -90,9 +90,12 @@ jobs:
 
       - name: Get new version
         id: version-after
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          git fetch --tags
-          AFTER=$(git describe --tags --abbrev=0 2>/dev/null || echo "none")
+          # Query remote tags directly to avoid local git cache issues
+          AFTER=$(git ls-remote --tags --sort=-v:refname origin 'refs/tags/v*' \
+            | head -1 | sed 's|.*refs/tags/||' || echo "none")
           echo "version=$AFTER" >> $GITHUB_OUTPUT
           echo "New latest tag: $AFTER"
 
