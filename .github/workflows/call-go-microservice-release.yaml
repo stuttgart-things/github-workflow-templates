@@ -172,6 +172,33 @@ jobs:
           GITHUB_USER: ${{ github.actor }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Update release notes with artifacts
+        if: steps.version-after.outputs.new_release == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION="${{ steps.version-after.outputs.version }}"
+
+          # Get existing release body
+          EXISTING_BODY=$(gh release view "$VERSION" --json body --jq '.body')
+
+          # Append artifact info to release body
+          gh release edit "$VERSION" --notes "$(cat <<EOF
+          ${EXISTING_BODY}
+
+          ### Artifacts
+
+          | Artifact | Reference |
+          |----------|-----------|
+          | **Image** | \`${{ inputs.target-image-repo }}:${VERSION}\` |
+          | **Kustomize** | \`${{ inputs.kustomize-oci-repo }}:${VERSION}\` |
+
+          \`\`\`bash
+          docker pull ${{ inputs.target-image-repo }}:${VERSION}
+          \`\`\`
+          EOF
+          )"
+
       - name: Release summary
         if: steps.version-after.outputs.new_release == 'true'
         run: |
