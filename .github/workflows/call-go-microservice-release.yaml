@@ -182,7 +182,10 @@ jobs:
           # Get existing release body
           EXISTING_BODY=$(gh release view "$VERSION" --json body --jq '.body')
 
-          # Append artifact info to release body
+          # Append artifact info and deploy instructions to release body
+          REPO_NAME="${{ github.event.repository.name }}"
+          REPO_FULL="${{ github.repository }}"
+
           gh release edit "$VERSION" --notes "$(cat <<EOF
           ${EXISTING_BODY}
 
@@ -196,6 +199,31 @@ jobs:
           \`\`\`bash
           docker pull ${{ inputs.target-image-repo }}:${VERSION}
           \`\`\`
+
+          ### Deploy
+
+          **1. Pull kustomize base**
+
+          \`\`\`bash
+          oras pull ${{ inputs.kustomize-oci-repo }}:${VERSION} -o /tmp/kustomize-base-${REPO_NAME}
+          \`\`\`
+
+          **2. Apply to cluster**
+
+          \`\`\`bash
+          kubectl apply -k /tmp/kustomize-base-${REPO_NAME}/
+          \`\`\`
+
+          **3. (Optional) Use an overlay**
+
+          Copy the pulled base into \`deployment/kustomize-base\` and apply an overlay:
+
+          \`\`\`bash
+          cp -r /tmp/kustomize-base-${REPO_NAME} deployment/kustomize-base
+          kubectl apply -k deployment/overlays/example/
+          \`\`\`
+
+          See [deployment README](https://github.com/${REPO_FULL}/blob/${VERSION}/deployment/README.md) and [example overlay](https://github.com/${REPO_FULL}/tree/${VERSION}/deployment/overlays/example) for details.
           EOF
           )"
 
