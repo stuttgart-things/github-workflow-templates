@@ -94,8 +94,11 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           # Query remote tags directly to avoid local git cache issues
-          AFTER=$(git ls-remote --tags --sort=-v:refname origin 'refs/tags/v*' \
-            | head -1 | sed 's|.*refs/tags/||' || echo "none")
+          # Filter out ^{} dereferenced entries and extract clean tag name
+          AFTER=$(git ls-remote --tags origin 'refs/tags/v*' \
+            | grep -v '\^{}' | sed 's|.*refs/tags/||' \
+            | sort -V | tail -1 || echo "none")
+          AFTER="${AFTER:-none}"
           echo "version=$AFTER" >> $GITHUB_OUTPUT
           echo "New latest tag: $AFTER"
 
