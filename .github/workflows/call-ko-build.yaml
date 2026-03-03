@@ -1,0 +1,82 @@
+---
+name: Build & Push Container Image (Ko)
+on:
+  workflow_call:
+    inputs:
+      runs-on:
+        default: ubuntu-latest
+        type: string
+      go-version:
+        default: "1.25.5"
+        type: string
+      platforms:
+        default: linux/amd64,linux/arm64
+        type: string
+      ko-version:
+        default: ""
+        type: string
+        description: "Ko version (empty = latest)"
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build:
+    name: Build, Scan & Push Image
+    runs-on: ${{ inputs.runs-on }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ inputs.go-version }}
+
+      - name: Set up Ko
+        uses: ko-build/setup-ko@v0.9
+        with:
+          version: ${{ inputs.ko-version }}
+
+      - name: Set image repository
+        id: image-repo
+        run: |
+          REPO_NAME="${{ github.event.repository.name }}"
+          if [[ "${{ github.ref }}" == "refs/heads/main" && ("${{ github.event_name }}" == "push" || "${{ github.event_name }}" == "workflow_dispatch") ]]; then
+            echo "repo=ghcr.io/${{ github.repository }}" >> $GITHUB_OUTPUT
+            echo "tag=main" >> $GITHUB_OUTPUT
+          else
+            RANDOM_TAG=$(openssl rand -hex 6)
+            echo "repo=ttl.sh/${REPO_NAME}-${RANDOM_TAG}" >> $GITHUB_OUTPUT
+            echo "tag=latest" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Login to GHCR
+        if: github.ref == 'refs/heads/main'
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | ko login ghcr.io -u ${{ github.actor }} --password-stdin
+
+      - name: Build and push image
+        run: |
+          ko build --bare --tags=${{ steps.image-repo.outputs.tag }} . \
+            --platform=${{ inputs.platforms }}
+        env:
+          KO_DOCKER_REPO: ${{ steps.image-repo.outputs.repo }}
+
+      - name: Image Summary
+        run: |
+          IMAGE="${{ steps.image-repo.outputs.repo }}:${{ steps.image-repo.outputs.tag }}"
+          echo "## Container Image Build Complete" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Image:** \`${IMAGE}\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Pull command:**" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
+          echo "docker pull ${IMAGE}" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+
+          if [[ "${{ steps.image-repo.outputs.repo }}" == ttl.sh/* ]]; then
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "**Note:** ttl.sh images expire after 1 hour" >> $GITHUB_STEP_SUMMARY
+          fi
