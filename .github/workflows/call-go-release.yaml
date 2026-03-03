@@ -1,0 +1,194 @@
+---
+name: Release Go Project
+on:
+  workflow_call:
+    inputs:
+      runs-on:
+        default: ubuntu-latest
+        type: string
+      go-version:
+        default: "1.25.5"
+        type: string
+      goreleaser-version:
+        default: v2.13.3
+        type: string
+      stage-image:
+        default: false
+        type: boolean
+        description: Stage container image from :main to :version tag
+      source-image:
+        default: ""
+        type: string
+        description: "Source image to stage (default: ghcr.io/<repo>:main)"
+      push-kustomize:
+        default: false
+        type: boolean
+        description: Push KCL kustomize base as OCI artifact
+      kcl-source-dir:
+        default: deployment
+        type: string
+      kcl-profile-file:
+        default: ""
+        type: string
+      kustomize-oci-repo:
+        default: ""
+        type: string
+      dry-run-only:
+        default: false
+        type: boolean
+        description: Semantic-release dry run only
+      dagger-release-module:
+        default: github.com/stuttgart-things/dagger/release@v0.82.1
+        type: string
+      dagger-kcl-module:
+        default: github.com/stuttgart-things/dagger/kcl@v0.82.1
+        type: string
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  release:
+    name: Release
+    runs-on: ${{ inputs.runs-on }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Get version before release
+        id: version-before
+        run: |
+          git fetch --tags
+          BEFORE=$(git tag --sort=-v:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -1 || echo "none")
+          echo "version=$BEFORE" >> $GITHUB_OUTPUT
+          echo "Current latest tag: $BEFORE"
+
+      - name: Semantic release
+        uses: dagger/dagger-for-github@v8.3.0
+        with:
+          module: ${{ inputs.dagger-release-module }}
+          call: >-
+            semantic
+            --src .
+            --token env:GITHUB_TOKEN
+            --dry-run-only=${{ inputs.dry-run-only }}
+          cloud-token: ${{ secrets.DAGGER_CLOUD_TOKEN }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Sync to released commit
+        run: |
+          git fetch --tags
+          git pull --ff-only || true
+
+      - name: Get new version
+        id: version-after
+        run: |
+          AFTER=$(git tag --sort=-v:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -1 || echo "none")
+          echo "version=$AFTER" >> $GITHUB_OUTPUT
+
+          if [ "$AFTER" != "${{ steps.version-before.outputs.version }}" ] && [ "$AFTER" != "none" ]; then
+            echo "new_release=true" >> $GITHUB_OUTPUT
+            echo "New release: $AFTER"
+          else
+            echo "new_release=false" >> $GITHUB_OUTPUT
+            echo "No new release"
+          fi
+
+      - name: Set up Go
+        if: steps.version-after.outputs.new_release == 'true'
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ inputs.go-version }}
+
+      - name: Run GoReleaser
+        if: steps.version-after.outputs.new_release == 'true'
+        uses: goreleaser/goreleaser-action@v6
+        with:
+          distribution: goreleaser
+          version: ${{ inputs.goreleaser-version }}
+          args: release --clean
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up crane
+        if: steps.version-after.outputs.new_release == 'true' && inputs.stage-image
+        uses: imjasonh/setup-crane@v0.5
+
+      - name: Stage container image
+        if: steps.version-after.outputs.new_release == 'true' && inputs.stage-image
+        run: |
+          SOURCE="${{ inputs.source-image }}"
+          [ -z "$SOURCE" ] && SOURCE="ghcr.io/${{ github.repository }}:main"
+          TARGET="ghcr.io/${{ github.repository }}:${{ steps.version-after.outputs.version }}"
+
+          echo "${{ secrets.GITHUB_TOKEN }}" | crane auth login ghcr.io -u ${{ github.actor }} --password-stdin
+          crane copy "$SOURCE" "$TARGET"
+          echo "Staged image: $TARGET"
+
+      - name: Push kustomize base
+        if: steps.version-after.outputs.new_release == 'true' && inputs.push-kustomize
+        uses: dagger/dagger-for-github@v8.3.0
+        with:
+          module: ${{ inputs.dagger-kcl-module }}
+          call: >-
+            push-kustomize-base
+            --source ./${{ inputs.kcl-source-dir }}
+            --parameters-file ./${{ inputs.kcl-profile-file }}
+            --address ${{ inputs.kustomize-oci-repo }}
+            --tag ${{ steps.version-after.outputs.version }}
+            --user env:GITHUB_USER
+            --password env:GITHUB_TOKEN
+          cloud-token: ${{ secrets.DAGGER_CLOUD_TOKEN }}
+        env:
+          GITHUB_USER: ${{ github.actor }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Update release notes
+        if: steps.version-after.outputs.new_release == 'true' && (inputs.stage-image || inputs.push-kustomize)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION="${{ steps.version-after.outputs.version }}"
+          EXISTING_BODY=$(gh release view "$VERSION" --json body --jq '.body')
+
+          # Build artifacts table
+          ARTIFACTS="### Artifacts\n\n| Artifact | Reference |\n|----------|-----------|"
+          if [ "${{ inputs.stage-image }}" = "true" ]; then
+            SOURCE="${{ inputs.source-image }}"
+            [ -z "$SOURCE" ] && SOURCE="ghcr.io/${{ github.repository }}"
+            ARTIFACTS="${ARTIFACTS}\n| **Image** | \`ghcr.io/${{ github.repository }}:${VERSION}\` |"
+          fi
+          if [ "${{ inputs.push-kustomize }}" = "true" ]; then
+            ARTIFACTS="${ARTIFACTS}\n| **Kustomize** | \`${{ inputs.kustomize-oci-repo }}:${VERSION}\` |"
+          fi
+
+          gh release edit "$VERSION" --notes "$(printf '%s\n\n%b' "$EXISTING_BODY" "$ARTIFACTS")"
+
+      - name: Release summary
+        if: steps.version-after.outputs.new_release == 'true'
+        run: |
+          VERSION="${{ steps.version-after.outputs.version }}"
+          echo "## Release $VERSION" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Step | Details |" >> $GITHUB_STEP_SUMMARY
+          echo "|------|---------|" >> $GITHUB_STEP_SUMMARY
+          echo "| **Version** | \`$VERSION\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Binaries** | Published via GoReleaser |" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ inputs.stage-image }}" = "true" ]; then
+            echo "| **Image** | \`ghcr.io/${{ github.repository }}:$VERSION\` |" >> $GITHUB_STEP_SUMMARY
+          fi
+          if [ "${{ inputs.push-kustomize }}" = "true" ]; then
+            echo "| **Kustomize** | \`${{ inputs.kustomize-oci-repo }}:$VERSION\` |" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: No release summary
+        if: steps.version-after.outputs.new_release != 'true'
+        run: |
+          echo "## No Release" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "No new version was created by semantic-release." >> $GITHUB_STEP_SUMMARY
