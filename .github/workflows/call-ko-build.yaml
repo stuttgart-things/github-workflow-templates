@@ -12,11 +12,6 @@ on:
       platforms:
         default: linux/amd64,linux/arm64
         type: string
-      ko-version:
-        default: ""
-        type: string
-        description: "Ko version (empty = latest)"
-
 permissions:
   contents: read
   packages: write
@@ -37,8 +32,6 @@ jobs:
 
       - name: Set up Ko
         uses: ko-build/setup-ko@v0.9
-        with:
-          version: ${{ inputs.ko-version }}
 
       - name: Set image repository
         id: image-repo
