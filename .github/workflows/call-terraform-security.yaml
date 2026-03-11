@@ -49,7 +49,7 @@ jobs:
             ${{ inputs.scan-dir }} | tee ./${{ inputs.artifact-name }}.txt
 
       - name: Upload scan results
-        uses: actions/upload-artifact@v6.0.0
+        uses: actions/upload-artifact@v7.0.0
         with:
           name: ${{ inputs.artifact-name }}
           path: ${{ inputs.artifact-name }}.txt
