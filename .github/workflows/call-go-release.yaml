@@ -15,11 +15,11 @@ on:
       stage-image:
         default: false
         type: boolean
-        description: Stage container image from :main to :version tag
-      source-image:
-        default: ""
+        description: Build and push container image with version tag via ko
+      image-platforms:
+        default: linux/amd64,linux/arm64
         type: string
-        description: "Source image to stage (default: ghcr.io/<repo>:main)"
+        description: Target platforms for container image build
       push-kustomize:
         default: false
         type: boolean
@@ -115,20 +115,25 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Set up crane
+      - name: Set up Ko
         if: steps.version-after.outputs.new_release == 'true' && inputs.stage-image
-        uses: imjasonh/setup-crane@v0.5
+        uses: ko-build/setup-ko@v0.9
 
-      - name: Stage container image
+      - name: Login to GHCR
+        if: steps.version-after.outputs.new_release == 'true' && inputs.stage-image
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | ko login ghcr.io -u ${{ github.actor }} --password-stdin
+
+      - name: Build and push versioned image
         if: steps.version-after.outputs.new_release == 'true' && inputs.stage-image
         run: |
-          SOURCE="${{ inputs.source-image }}"
-          [ -z "$SOURCE" ] && SOURCE="ghcr.io/${{ github.repository }}:main"
-          TARGET="ghcr.io/${{ github.repository }}:${{ steps.version-after.outputs.version }}"
-
-          echo "${{ secrets.GITHUB_TOKEN }}" | crane auth login ghcr.io -u ${{ github.actor }} --password-stdin
-          crane copy "$SOURCE" "$TARGET"
-          echo "Staged image: $TARGET"
+          export BUILD_DATE="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          VERSION="${{ steps.version-after.outputs.version }}"
+          ko build --bare --tags="${VERSION}" . \
+            --platform=${{ inputs.image-platforms }}
+        env:
+          KO_DOCKER_REPO: ghcr.io/${{ github.repository }}
+          VERSION: ${{ steps.version-after.outputs.version }}
+          COMMIT: ${{ github.sha }}
 
       - name: Push kustomize base
         if: steps.version-after.outputs.new_release == 'true' && inputs.push-kustomize
@@ -159,8 +164,6 @@ jobs:
           # Build artifacts table
           ARTIFACTS="### Artifacts\n\n| Artifact | Reference |\n|----------|-----------|"
           if [ "${{ inputs.stage-image }}" = "true" ]; then
-            SOURCE="${{ inputs.source-image }}"
-            [ -z "$SOURCE" ] && SOURCE="ghcr.io/${{ github.repository }}"
             ARTIFACTS="${ARTIFACTS}\n| **Image** | \`ghcr.io/${{ github.repository }}:${VERSION}\` |"
           fi
           if [ "${{ inputs.push-kustomize }}" = "true" ]; then
