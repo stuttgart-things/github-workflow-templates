@@ -1,0 +1,106 @@
+---
+name: Flux Destroy
+on:
+  workflow_call:
+    inputs:
+      runs-on:
+        required: false
+        type: string
+        default: dagger
+      environment-name:
+        required: false
+        type: string
+        default: k8s
+      kube-config:
+        description: "Path to SOPS-encrypted kubeconfig in the repo"
+        required: true
+        type: string
+      branch-name:
+        description: "Git branch to checkout"
+        required: false
+        type: string
+        default: main
+      dagger-version:
+        description: "Dagger CLI version"
+        required: false
+        type: string
+        default: "0.20.1"
+      sops-module-version:
+        description: "SOPS Dagger module version"
+        required: false
+        type: string
+        default: v0.82.1
+      kubectl-image:
+        description: "Container image with kubectl and helm"
+        required: false
+        type: string
+        default: ghcr.io/stuttgart-things/sthings-k8s:1.33.1
+      repository:
+        description: "Repository where flux config was committed (owner/repo)"
+        required: false
+        type: string
+        default: ""
+      destination-path:
+        description: "Path in repo where flux config was committed"
+        required: false
+        type: string
+        default: ""
+
+jobs:
+  Flux-Destroy:
+    name: Flux Destroy
+    runs-on: ${{ inputs.runs-on }}
+    environment: ${{ inputs.environment-name }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6.0.2
+        with:
+          fetch-depth: '0'
+          ref: ${{ inputs.branch-name }}
+
+      - name: Decrypt kubeconfig with SOPS
+        uses: dagger/dagger-for-github@v8.4.0
+        env:
+          SOPS_AGE_KEY: ${{ secrets.SOPS_AGE_KEY }}
+        with:
+          version: ${{ inputs.dagger-version }}
+          verb: call
+          module: github.com/stuttgart-things/dagger/sops@${{ inputs.sops-module-version }}
+          args: >-
+            decrypt
+            --age-key env:SOPS_AGE_KEY
+            --encrypted-file ${{ inputs.kube-config }}
+            export --path /tmp/kubeconfig
+          cloud-token: ${{ secrets.DAGGER_CLOUD_TOKEN }}
+
+      - name: Delete FluxInstance CR
+        run: |
+          docker run --rm -v /tmp/kubeconfig:/kubeconfig \
+            ${{ inputs.kubectl-image }} \
+            kubectl --kubeconfig=/kubeconfig delete fluxinstance --all -n flux-system 2>/dev/null || echo "No FluxInstance to delete"
+
+      - name: Delete Flux secrets
+        run: |
+          docker run --rm -v /tmp/kubeconfig:/kubeconfig \
+            ${{ inputs.kubectl-image }} \
+            kubectl --kubeconfig=/kubeconfig delete secret --all -n flux-system 2>/dev/null || echo "No secrets to delete"
+
+      - name: Uninstall Flux operator (Helm)
+        run: |
+          docker run --rm -v /tmp/kubeconfig:/kubeconfig \
+            ${{ inputs.kubectl-image }} \
+            helm --kubeconfig=/kubeconfig uninstall flux-operator -n flux-system 2>/dev/null || echo "No Helm release to uninstall"
+
+      - name: Delete flux-system namespace
+        run: |
+          docker run --rm -v /tmp/kubeconfig:/kubeconfig \
+            ${{ inputs.kubectl-image }} \
+            kubectl --kubeconfig=/kubeconfig delete namespace flux-system --wait=true --timeout=120s 2>/dev/null || echo "Namespace already deleted"
+
+      - name: Revert git commits (if repository specified)
+        if: inputs.repository != '' && inputs.destination-path != ''
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+        run: |
+          echo "Flux config at ${{ inputs.destination-path }} in ${{ inputs.repository }} should be cleaned up manually or via a separate PR."
+          echo "Cluster-side resources have been removed."

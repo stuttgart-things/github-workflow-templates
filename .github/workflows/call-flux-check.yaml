@@ -1,0 +1,101 @@
+---
+name: Flux Check Cluster
+on:
+  workflow_call:
+    inputs:
+      runs-on:
+        required: false
+        type: string
+        default: dagger
+      environment-name:
+        required: false
+        type: string
+        default: k8s
+      kube-config:
+        description: "Path to SOPS-encrypted kubeconfig in the repo"
+        required: true
+        type: string
+      branch-name:
+        description: "Git branch to checkout"
+        required: false
+        type: string
+        default: main
+      dagger-version:
+        description: "Dagger CLI version"
+        required: false
+        type: string
+        default: "0.20.1"
+      sops-module-version:
+        description: "SOPS Dagger module version"
+        required: false
+        type: string
+        default: v0.82.1
+      kubectl-image:
+        description: "Container image with kubectl"
+        required: false
+        type: string
+        default: bitnami/kubectl:1.33
+
+jobs:
+  Flux-Check:
+    name: Flux Check
+    runs-on: ${{ inputs.runs-on }}
+    environment: ${{ inputs.environment-name }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6.0.2
+        with:
+          fetch-depth: '0'
+          ref: ${{ inputs.branch-name }}
+
+      - name: Decrypt kubeconfig with SOPS
+        uses: dagger/dagger-for-github@v8.4.0
+        env:
+          SOPS_AGE_KEY: ${{ secrets.SOPS_AGE_KEY }}
+        with:
+          version: ${{ inputs.dagger-version }}
+          verb: call
+          module: github.com/stuttgart-things/dagger/sops@${{ inputs.sops-module-version }}
+          args: >-
+            decrypt
+            --age-key env:SOPS_AGE_KEY
+            --encrypted-file ${{ inputs.kube-config }}
+            export --path /tmp/kubeconfig
+          cloud-token: ${{ secrets.DAGGER_CLOUD_TOKEN }}
+
+      - name: Check Flux status
+        run: |
+          echo "## Nodes" && echo ""
+          docker run --rm -v /tmp/kubeconfig:/kubeconfig \
+            ${{ inputs.kubectl-image }} \
+            --kubeconfig=/kubeconfig get nodes -o wide
+
+          echo "" && echo "## Flux System Pods" && echo ""
+          docker run --rm -v /tmp/kubeconfig:/kubeconfig \
+            ${{ inputs.kubectl-image }} \
+            --kubeconfig=/kubeconfig get pods -n flux-system
+
+          echo "" && echo "## FluxInstance" && echo ""
+          docker run --rm -v /tmp/kubeconfig:/kubeconfig \
+            ${{ inputs.kubectl-image }} \
+            --kubeconfig=/kubeconfig get fluxinstance -n flux-system -o wide 2>/dev/null || echo "No FluxInstance found"
+
+          echo "" && echo "## GitRepositories" && echo ""
+          docker run --rm -v /tmp/kubeconfig:/kubeconfig \
+            ${{ inputs.kubectl-image }} \
+            --kubeconfig=/kubeconfig get gitrepositories -A 2>/dev/null || echo "No GitRepositories found"
+
+          echo "" && echo "## Kustomizations" && echo ""
+          docker run --rm -v /tmp/kubeconfig:/kubeconfig \
+            ${{ inputs.kubectl-image }} \
+            --kubeconfig=/kubeconfig get kustomizations -A 2>/dev/null || echo "No Kustomizations found"
+
+          echo "" && echo "## Secrets (flux-system)" && echo ""
+          docker run --rm -v /tmp/kubeconfig:/kubeconfig \
+            ${{ inputs.kubectl-image }} \
+            --kubeconfig=/kubeconfig get secrets -n flux-system
+
+          echo "" && echo "## All Resources (flux-system)" && echo ""
+          docker run --rm -v /tmp/kubeconfig:/kubeconfig \
+            ${{ inputs.kubectl-image }} \
+            --kubeconfig=/kubeconfig get all -n flux-system
