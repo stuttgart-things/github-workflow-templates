@@ -85,7 +85,7 @@ jobs:
         env:
           SOPS_AGE_KEY: ${{ secrets.SOPS_AGE_KEY }}
           AGE_PUB: ${{ secrets.AGE_PUB }}
-          GITHUB_USER: ${{ secrets.GH_USER }}
+          GITHUB_USER: ${{ github.actor }}
           GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
         with:
           version: ${{ inputs.dagger-version }}
