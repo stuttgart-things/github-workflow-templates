@@ -19,6 +19,16 @@ on:
         description: "Path to SOPS-encrypted kubeconfig in the repo"
         required: true
         type: string
+      operator-version:
+        description: "Flux operator version"
+        required: false
+        type: string
+        default: "0.42.1"
+      helmfile-ref:
+        description: "Helmfile reference for Flux operator"
+        required: false
+        type: string
+        default: "git::https://github.com/stuttgart-things/helm.git@cicd/flux-operator.yaml.gotmpl"
       branch-name:
         description: "Git branch to checkout"
         required: false
@@ -29,26 +39,16 @@ on:
         required: false
         type: string
         default: "0.20.1"
+      blueprints-version:
+        description: "Blueprints Dagger module version"
+        required: false
+        type: string
+        default: v1.69.0
       sops-module-version:
         description: "SOPS Dagger module version"
         required: false
         type: string
         default: v0.82.1
-      kubectl-image:
-        description: "Container image with kubectl and helm"
-        required: false
-        type: string
-        default: alpine/k8s:1.33.1
-      repository:
-        description: "Repository where flux config was committed (owner/repo)"
-        required: false
-        type: string
-        default: ""
-      destination-path:
-        description: "Path in repo where flux config was committed"
-        required: false
-        type: string
-        default: ""
 
 jobs:
   Flux-Destroy:
@@ -79,34 +79,15 @@ jobs:
             export --path /tmp/kubeconfig
           cloud-token: ${{ secrets.DAGGER_CLOUD_TOKEN }}
 
-      - name: Delete FluxInstance CR
-        run: |
-          docker run --rm -v /tmp/kubeconfig:/kubeconfig \
-            ${{ inputs.kubectl-image }} \
-            kubectl --kubeconfig=/kubeconfig delete fluxinstance --all -n flux-system 2>/dev/null || echo "No FluxInstance to delete"
-
-      - name: Delete Flux secrets
-        run: |
-          docker run --rm -v /tmp/kubeconfig:/kubeconfig \
-            ${{ inputs.kubectl-image }} \
-            kubectl --kubeconfig=/kubeconfig delete secret --all -n flux-system 2>/dev/null || echo "No secrets to delete"
-
-      - name: Uninstall Flux operator (Helm)
-        run: |
-          docker run --rm -v /tmp/kubeconfig:/kubeconfig \
-            ${{ inputs.kubectl-image }} \
-            helm --kubeconfig=/kubeconfig uninstall flux-operator -n flux-system 2>/dev/null || echo "No Helm release to uninstall"
-
-      - name: Delete flux-system namespace
-        run: |
-          docker run --rm -v /tmp/kubeconfig:/kubeconfig \
-            ${{ inputs.kubectl-image }} \
-            kubectl --kubeconfig=/kubeconfig delete namespace flux-system --wait=true --timeout=120s 2>/dev/null || echo "Namespace already deleted"
-
-      - name: Revert git commits (if repository specified)
-        if: inputs.repository != '' && inputs.destination-path != ''
-        env:
-          GH_TOKEN: ${{ secrets.GH_TOKEN }}
-        run: |
-          echo "Flux config at ${{ inputs.destination-path }} in ${{ inputs.repository }} should be cleaned up manually or via a separate PR."
-          echo "Cluster-side resources have been removed."
+      - name: Flux Destroy with Dagger
+        uses: dagger/dagger-for-github@v8.4.0
+        with:
+          version: ${{ inputs.dagger-version }}
+          verb: call
+          module: github.com/stuttgart-things/blueprints/kubernetes-deployment@${{ inputs.blueprints-version }}
+          args: >-
+            flux-destroy
+            --kube-config file:///tmp/kubeconfig
+            --helmfile-ref "${{ inputs.helmfile-ref }}"
+            --operator-version "${{ inputs.operator-version }}"
+          cloud-token: ${{ secrets.DAGGER_CLOUD_TOKEN }}
