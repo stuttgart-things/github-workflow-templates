@@ -38,7 +38,7 @@ on:
         description: "Container image with kubectl and helm"
         required: false
         type: string
-        default: ghcr.io/stuttgart-things/sthings-k8s:1.33.1
+        default: alpine/k8s:1.33.1
       repository:
         description: "Repository where flux config was committed (owner/repo)"
         required: false
