@@ -1,0 +1,159 @@
+---
+name: Flux Bootstrap with Dagger
+on:
+  workflow_call:
+    inputs:
+      runs-on:
+        required: false
+        type: string
+        default: dagger
+      environment-name:
+        required: false
+        type: string
+        default: k8s
+      cluster-name:
+        description: "Cluster name (must match secrets/<name>.yaml kubeconfig)"
+        required: true
+        type: string
+      kubeconfig-path:
+        description: "Path to SOPS-encrypted kubeconfig in the repo"
+        required: false
+        type: string
+        default: ""
+      repository:
+        description: "Target repository for Flux config (owner/repo)"
+        required: true
+        type: string
+      destination-path:
+        description: "Destination path for Flux config in the repository"
+        required: true
+        type: string
+      operator-version:
+        description: "Flux operator version"
+        required: false
+        type: string
+        default: "0.42.1"
+      flux-version:
+        description: "Flux version"
+        required: false
+        type: string
+        default: "2.8"
+      helmfile-ref:
+        description: "Helmfile reference for Flux operator deployment"
+        required: false
+        type: string
+        default: "git::https://github.com/stuttgart-things/helm.git@cicd/flux-operator.yaml.gotmpl"
+      deploy-operator:
+        description: "Deploy Flux operator via Helmfile"
+        required: false
+        type: boolean
+        default: true
+      commit-to-git:
+        description: "Commit rendered config to git"
+        required: false
+        type: boolean
+        default: true
+      render-secrets:
+        description: "Render secret manifests via KCL"
+        required: false
+        type: boolean
+        default: true
+      apply-secrets:
+        description: "Apply rendered secrets to cluster"
+        required: false
+        type: boolean
+        default: true
+      apply-config:
+        description: "Apply rendered config to cluster"
+        required: false
+        type: boolean
+        default: false
+      encrypt-secrets:
+        description: "Encrypt secrets with SOPS before git commit"
+        required: false
+        type: boolean
+        default: true
+      wait-for-reconciliation:
+        description: "Wait for Flux reconciliation after apply"
+        required: false
+        type: boolean
+        default: true
+      branch-name:
+        description: "Git branch to checkout"
+        required: false
+        type: string
+        default: main
+      dagger-version:
+        description: "Dagger CLI version"
+        required: false
+        type: string
+        default: "0.19.11"
+      blueprints-version:
+        description: "Blueprints Dagger module version"
+        required: false
+        type: string
+        default: v1.69.0
+      sops-module-version:
+        description: "SOPS Dagger module version"
+        required: false
+        type: string
+        default: v0.82.1
+
+jobs:
+  Flux-Bootstrap:
+    name: Flux Bootstrap
+    runs-on: ${{ inputs.runs-on }}
+    environment: ${{ inputs.environment-name }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6.0.2
+        with:
+          fetch-depth: '0'
+          ref: ${{ inputs.branch-name }}
+
+      - name: Decrypt kubeconfig with SOPS
+        uses: dagger/dagger-for-github@v8.4.0
+        env:
+          SOPS_AGE_KEY: ${{ secrets.SOPS_AGE_KEY }}
+        with:
+          version: ${{ inputs.dagger-version }}
+          verb: call
+          module: github.com/stuttgart-things/dagger/sops@${{ inputs.sops-module-version }}
+          args: >-
+            decrypt
+            --age-key env:SOPS_AGE_KEY
+            --encrypted-file ${{ inputs.kubeconfig-path != '' && inputs.kubeconfig-path || format('secrets/{0}.yaml', inputs.cluster-name) }}
+            export --path /tmp/${{ inputs.cluster-name }}
+          cloud-token: ${{ secrets.DAGGER_CLOUD_TOKEN }}
+
+      - name: Flux Bootstrap with Dagger
+        uses: dagger/dagger-for-github@v8.4.0
+        env:
+          SOPS_AGE_KEY: ${{ secrets.SOPS_AGE_KEY }}
+          AGE_PUB: ${{ secrets.AGE_PUB }}
+          GITHUB_USER: ${{ secrets.GH_USER }}
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+        with:
+          version: ${{ inputs.dagger-version }}
+          verb: call
+          module: github.com/stuttgart-things/blueprints/kubernetes-deployment@${{ inputs.blueprints-version }}
+          args: >-
+            flux-bootstrap
+            --kube-config file:///tmp/${{ inputs.cluster-name }}
+            --deploy-operator=${{ inputs.deploy-operator }}
+            --commit-to-git=${{ inputs.commit-to-git }}
+            --repository ${{ inputs.repository }}
+            --destination-path "${{ inputs.destination-path }}"
+            --git-username env:GITHUB_USER
+            --git-password env:GITHUB_TOKEN
+            --git-token env:GITHUB_TOKEN
+            --sops-age-key env:SOPS_AGE_KEY
+            --age-public-key env:AGE_PUB
+            --render-secrets=${{ inputs.render-secrets }}
+            --apply-secrets=${{ inputs.apply-secrets }}
+            --apply-config=${{ inputs.apply-config }}
+            --encrypt-secrets=${{ inputs.encrypt-secrets }}
+            --helmfile-ref "${{ inputs.helmfile-ref }}"
+            --operator-version "${{ inputs.operator-version }}"
+            --wait-for-reconciliation=${{ inputs.wait-for-reconciliation }}
+          cloud-token: ${{ secrets.DAGGER_CLOUD_TOKEN }}
