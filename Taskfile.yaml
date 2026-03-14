@@ -12,7 +12,6 @@ includes:
   git:
     taskfile: https://raw.githubusercontent.com/stuttgart-things/platform-engineering-showcase/refs/heads/main/taskfiles/git.yaml
 
-
 tasks:
   do:
     desc: Select a task to run

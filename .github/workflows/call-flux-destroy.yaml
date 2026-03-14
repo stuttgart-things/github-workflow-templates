@@ -43,7 +43,7 @@ on:
         description: "Blueprints Dagger module version"
         required: false
         type: string
-        default: v1.69.0
+        default: v1.70.0
       sops-module-version:
         description: "SOPS Dagger module version"
         required: false
