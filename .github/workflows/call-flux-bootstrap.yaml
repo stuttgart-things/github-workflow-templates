@@ -11,6 +11,10 @@ on:
         required: false
         type: string
         default: k8s
+      source-repo:
+        description: "Repository containing the SOPS-encrypted kubeconfig (owner/repo)"
+        required: true
+        type: string
       kube-config:
         description: "Path to SOPS-encrypted kubeconfig in the repo (e.g. secrets/infra.sthings.lab.yaml)"
         required: true
@@ -59,9 +63,11 @@ jobs:
     runs-on: ${{ inputs.runs-on }}
     environment: ${{ inputs.environment-name }}
     steps:
-      - name: Checkout code
+      - name: Checkout source repo
         uses: actions/checkout@v6.0.2
         with:
+          repository: ${{ inputs.source-repo }}
+          token: ${{ secrets.GH_TOKEN }}
           fetch-depth: '0'
           ref: ${{ inputs.branch-name }}
 
