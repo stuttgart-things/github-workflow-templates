@@ -50,12 +50,22 @@ jobs:
         if: github.ref == 'refs/heads/main'
         run: echo "${{ secrets.GITHUB_TOKEN }}" | ko login ghcr.io -u ${{ github.actor }} --password-stdin
 
+      - name: Set build metadata
+        id: build-meta
+        run: |
+          echo "commit=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
+          echo "date=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> $GITHUB_OUTPUT
+          echo "version=$(git describe --tags --always 2>/dev/null || echo unset)" >> $GITHUB_OUTPUT
+
       - name: Build and push image
         run: |
           ko build --bare --tags=${{ steps.image-repo.outputs.tag }} . \
             --platform=${{ inputs.platforms }}
         env:
           KO_DOCKER_REPO: ${{ steps.image-repo.outputs.repo }}
+          VERSION: ${{ steps.build-meta.outputs.version }}
+          BUILD_DATE: ${{ steps.build-meta.outputs.date }}
+          COMMIT: ${{ steps.build-meta.outputs.commit }}
 
       - name: Image Summary
         run: |
