@@ -38,7 +38,7 @@ on:
         description: "Container image with kubectl"
         required: false
         type: string
-        default: bitnami/kubectl:1.33
+        default: bitnami/kubectl:latest
 
 jobs:
   Flux-Check:
