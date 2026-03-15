@@ -1,0 +1,161 @@
+---
+name: Validate Artifact Versions
+description: |
+  Scans YAML files for Renovate-style annotations (# datasource=docker depName=...)
+  and verifies that the referenced container image tags exist in the registry.
+inputs:
+  path:
+    description: "Directory to scan for YAML files"
+    required: false
+    default: "."
+  file-pattern:
+    description: "Glob pattern to match YAML files (relative to path)"
+    required: false
+    default: "**/*.yaml"
+  diff-only:
+    description: "Only check files changed in the PR (requires PR context)"
+    required: false
+    default: "true"
+  base-sha:
+    description: "Base SHA for diff comparison (used when diff-only=true)"
+    required: false
+    default: ""
+  head-sha:
+    description: "Head SHA for diff comparison (used when diff-only=true)"
+    required: false
+    default: ""
+  annotation-pattern:
+    description: "Regex pattern for version annotations. Must contain datasource and depName groups."
+    required: false
+    default: '#\s*datasource=docker\s+depName='
+  registry-token:
+    description: "Token for authenticating against the container registry (e.g. GITHUB_TOKEN for ghcr.io)"
+    required: false
+    default: ""
+
+outputs:
+  checked:
+    description: "Number of artifact references checked"
+    value: ${{ steps.validate.outputs.checked }}
+  errors:
+    description: "Number of artifacts that failed validation"
+    value: ${{ steps.validate.outputs.errors }}
+  report:
+    description: "Markdown-formatted validation report"
+    value: ${{ steps.validate.outputs.report }}
+
+runs:
+  using: composite
+  steps:
+    - name: Install crane
+      uses: imjasonh/setup-crane@v0.4
+
+    - name: Authenticate crane
+      if: inputs.registry-token != ''
+      shell: bash
+      run: echo "${{ inputs.registry-token }}" | crane auth login ghcr.io -u token --password-stdin
+
+    - name: Validate artifact references
+      id: validate
+      shell: bash
+      env:
+        INPUT_PATH: ${{ inputs.path }}
+        INPUT_FILE_PATTERN: ${{ inputs.file-pattern }}
+        INPUT_DIFF_ONLY: ${{ inputs.diff-only }}
+        INPUT_BASE_SHA: ${{ inputs.base-sha }}
+        INPUT_HEAD_SHA: ${{ inputs.head-sha }}
+        INPUT_ANNOTATION_PATTERN: ${{ inputs.annotation-pattern }}
+      run: |
+        set -euo pipefail
+
+        ERRORS=0
+        CHECKED=0
+        REPORT=""
+
+        # Determine which files to check
+        if [ "$INPUT_DIFF_ONLY" = "true" ] && [ -n "$INPUT_BASE_SHA" ] && [ -n "$INPUT_HEAD_SHA" ]; then
+          echo "Mode: checking only changed files (diff)"
+          FILES=$(git diff --name-only --diff-filter=ACMR \
+            "${INPUT_BASE_SHA}..${INPUT_HEAD_SHA}" \
+            -- "${INPUT_PATH}/${INPUT_FILE_PATTERN}" 2>/dev/null || true)
+        else
+          echo "Mode: checking all matching files"
+          FILES=$(find "$INPUT_PATH" -type f -name '*.yaml' -o -name '*.yml' | sort)
+          if [ -n "$INPUT_FILE_PATTERN" ] && [ "$INPUT_FILE_PATTERN" != "**/*.yaml" ]; then
+            FILES=$(echo "$FILES" | grep -E "${INPUT_FILE_PATTERN}" || true)
+          fi
+        fi
+
+        if [ -z "$FILES" ]; then
+          echo "No matching YAML files found."
+          echo "checked=0" >> "$GITHUB_OUTPUT"
+          echo "errors=0" >> "$GITHUB_OUTPUT"
+          echo "report=No matching YAML files found." >> "$GITHUB_OUTPUT"
+          exit 0
+        fi
+
+        echo "Files to check:"
+        echo "$FILES"
+        echo ""
+
+        REPORT_LINES=""
+
+        while IFS= read -r file; do
+          [ -f "$file" ] || continue
+
+          while IFS= read -r line; do
+            if echo "$line" | grep -qE "$INPUT_ANNOTATION_PATTERN"; then
+              # Extract version value (handles both quoted and unquoted)
+              VERSION=$(echo "$line" | sed -E 's/.*:\s*(["'"'"']?)([^"'"'"'#]+)\1\s*#.*/\2/' | xargs)
+              DEP_NAME=$(echo "$line" | sed -E 's/.*depName=([^ #]+).*/\1/')
+
+              if [ -z "$VERSION" ] || [ -z "$DEP_NAME" ]; then
+                continue
+              fi
+
+              REF="${DEP_NAME}:${VERSION}"
+              CHECKED=$((CHECKED + 1))
+
+              echo -n "  Checking ${REF} ... "
+              if crane manifest "$REF" > /dev/null 2>&1; then
+                echo "OK"
+                REPORT_LINES="${REPORT_LINES}| \`${file}\` | \`${REF}\` | :white_check_mark: |"$'\n'
+              else
+                echo "FAILED - tag does not exist!"
+                ERRORS=$((ERRORS + 1))
+                REPORT_LINES="${REPORT_LINES}| \`${file}\` | \`${REF}\` | :x: not found |"$'\n'
+              fi
+            fi
+          done < "$file"
+        done <<< "$FILES"
+
+        # Build markdown report
+        REPORT="## Artifact Validation Report"$'\n\n'
+        REPORT+="Checked **${CHECKED}** artifact reference(s), **${ERRORS}** failed."$'\n\n'
+        if [ -n "$REPORT_LINES" ]; then
+          REPORT+="| File | Artifact | Status |"$'\n'
+          REPORT+="|------|----------|--------|"$'\n'
+          REPORT+="${REPORT_LINES}"
+        fi
+
+        echo "checked=${CHECKED}" >> "$GITHUB_OUTPUT"
+        echo "errors=${ERRORS}" >> "$GITHUB_OUTPUT"
+
+        # Write report to file for multiline output
+        REPORT_FILE=$(mktemp)
+        echo "$REPORT" > "$REPORT_FILE"
+        {
+          echo "report<<REPORT_EOF"
+          cat "$REPORT_FILE"
+          echo "REPORT_EOF"
+        } >> "$GITHUB_OUTPUT"
+
+        echo ""
+        echo "Checked ${CHECKED} artifact reference(s)."
+
+        if [ "$ERRORS" -gt 0 ]; then
+          echo "ERROR: ${ERRORS} artifact(s) could not be found in the registry."
+          exit 1
+        fi
+
+        echo "All artifact references are valid."
