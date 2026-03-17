@@ -87,12 +87,6 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v6.0.2
 
-      - name: Set homerun defaults
-        run: |
-          echo "SEVERITY=ERROR" >> $GITHUB_ENV
-          echo "STATUS=FAILED" >> $GITHUB_ENV
-          echo "start=$(date +%s)" >> $GITHUB_ENV
-
       - name: Test python code
         uses: dagger/dagger-for-github@v8.4.0
         with:
@@ -103,28 +97,6 @@ jobs:
             test
             --src .
             --python-version ${{ inputs.python-version }}
-
-      - name: Set homerun values
-        if: always()
-        run: |
-          duration=$(($(date +%s) - start))
-          echo "TEST_TIME=${duration}" >> $GITHUB_ENV
-          echo "STATUS=SUCCESS" >> $GITHUB_ENV
-        env:
-          start: ${{ env.start }}
-
-      - name: Send Message To Homerun
-        if: always()
-        uses: stuttgart-things/github-workflow-templates/actions/send-homerun-message@main
-        with:
-          url: "https://homerun.homerun-dev.sthings-vsphere.labul.sva.de/generic"
-          secretToken: "${{ secrets.HOMERUN_TOKEN }}"
-          title: "[PYTHON][TEST] ${{ inputs.module-name }} - ${{ env.STATUS }}"
-          message: "COMMIT: ${{ github.event.head_commit.message }} BRANCH: ${{ github.head_ref || github.ref_name }} MODULE: ${{ inputs.module-name }} TEST-TIME: ${TEST_TIME}s REPO: https://github.com/${GITHUB_REPOSITORY}"
-          severity: "${{ env.SEVERITY }}"
-          artifacts: "${{ inputs.module-name }}"
-          tags: "github,${{ inputs.module-name }},python,test"
-          assigneeName: "${GITHUB_ACTOR}"
 
   Security-Scan-Python:
     runs-on: ${{ inputs.runs-on }}
