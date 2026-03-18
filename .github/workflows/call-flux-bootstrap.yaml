@@ -92,7 +92,7 @@ jobs:
           SOPS_AGE_KEY: ${{ secrets.SOPS_AGE_KEY }}
           AGE_PUB: ${{ secrets.AGE_PUB }}
           GITHUB_USER: ${{ github.actor }}
-          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+          #GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
         with:
           version: ${{ inputs.dagger-version }}
           verb: call
@@ -105,8 +105,8 @@ jobs:
             --repository ${{ inputs.repository }}
             --destination-path "${{ inputs.destination-path }}"
             --git-username env:GITHUB_USER
-            --git-password env:GITHUB_TOKEN
-            --git-token env:GITHUB_TOKEN
+            --git-password env:${{ secrets.GH_TOKEN }}
+            --git-token env:${{ secrets.GH_TOKEN }}
             --sops-age-key env:SOPS_AGE_KEY
             --age-public-key env:AGE_PUB
             --render-secrets=true
