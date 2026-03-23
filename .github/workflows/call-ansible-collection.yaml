@@ -87,7 +87,7 @@ jobs:
     needs: collection-build
     uses: stuttgart-things/github-workflow-templates/.github/workflows/call-release-artifact.yaml@main
     with:
-      runs-on: dagger
+      runs-on: ${{ inputs.runs-on }}
       environment-name: k8s
       dagger-module-version: ${{ inputs.dagger-module-version }}
       artifact-name: ${{ needs.collection-build.outputs.collection-name }}
