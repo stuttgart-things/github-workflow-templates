@@ -37,6 +37,7 @@ jobs:
         uses: actions/setup-go@v6
         with:
           go-version: ${{ inputs.go-version }}
+          cache-dependency-path: ${{ inputs.working-directory }}/go.sum
 
       - name: Set up Ko
         uses: ko-build/setup-ko@v0.9
