@@ -16,6 +16,10 @@ on:
         default: "."
         type: string
         description: "Ko importpath to build (e.g. ./cmd/myapp)"
+      working-directory:
+        default: "."
+        type: string
+        description: "Directory containing go.mod (for mono-repos)"
 permissions:
   contents: read
   packages: write
@@ -53,6 +57,7 @@ jobs:
           echo "version=$(git describe --tags --always 2>/dev/null || echo unset)" >> $GITHUB_OUTPUT
 
       - name: Build and push image
+        working-directory: ${{ inputs.working-directory }}
         run: |
           ko build --bare --tags=${{ steps.image-repo.outputs.tag }} ${{ inputs.build-path }} \
             --platform=${{ inputs.platforms }}
