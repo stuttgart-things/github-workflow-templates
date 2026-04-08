@@ -55,7 +55,7 @@ jobs:
           ref: ${{ inputs.branch-name }}
 
       - name: Decrypt kubeconfig with SOPS
-        uses: dagger/dagger-for-github@v8.4.0
+        uses: dagger/dagger-for-github@v8.4.1
         env:
           SOPS_AGE_KEY: ${{ secrets.SOPS_AGE_KEY }}
         with:
