@@ -133,7 +133,7 @@ jobs:
 
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v4.0.5 # or the latest "vX.X.X" version tag for this action
+        uses: actions/deploy-pages@v5.0.0 # or the latest "vX.X.X" version tag for this action
 
       - name: Microsoft Teams Notification
         uses: skitionek/notify-microsoft-teams@master
