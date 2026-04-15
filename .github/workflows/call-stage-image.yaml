@@ -1,0 +1,70 @@
+---
+name: Stage Container Image (ttl.sh -> ghcr.io)
+on:
+  workflow_call:
+    inputs:
+      runs-on:
+        default: ubuntu-latest
+        type: string
+      source-image:
+        required: true
+        type: string
+        description: "Full source image reference (e.g. ttl.sh/my-repo:<sha>)"
+      target-image:
+        required: true
+        type: string
+        description: "Full target image reference (e.g. ghcr.io/org/repo:stage)"
+      target-registry:
+        default: ghcr.io
+        type: string
+      platform:
+        default: linux/amd64
+        type: string
+      crane-module-version:
+        default: v0.91.0
+        type: string
+        description: "Version of github.com/stuttgart-things/dagger/crane module"
+      dagger-action-version:
+        default: v8.4.1
+        type: string
+    secrets:
+      dagger-cloud-token:
+        required: false
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  stage:
+    name: Copy image to staging registry
+    runs-on: ${{ inputs.runs-on }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Copy image with crane
+        uses: dagger/dagger-for-github@v8.4.1
+        with:
+          module: github.com/stuttgart-things/dagger/crane@${{ inputs.crane-module-version }}
+          call: >-
+            copy
+            --source ${{ inputs.source-image }}
+            --target ${{ inputs.target-image }}
+            --target-registry ${{ inputs.target-registry }}
+            --target-username env:REGISTRY_USERNAME
+            --target-password env:REGISTRY_PASSWORD
+            --platform ${{ inputs.platform }}
+          cloud-token: ${{ secrets.dagger-cloud-token }}
+        env:
+          REGISTRY_USERNAME: ${{ github.actor }}
+          REGISTRY_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Summary
+        run: |
+          echo "## Image Staged" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Source:** \`${{ inputs.source-image }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Target:** \`${{ inputs.target-image }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Platform:** \`${{ inputs.platform }}\`" >> $GITHUB_STEP_SUMMARY
