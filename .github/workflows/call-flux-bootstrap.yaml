@@ -45,17 +45,17 @@ on:
         description: "Dagger CLI version"
         required: false
         type: string
-        default: "0.20.1"
+        default: "0.20.6"
       blueprints-version:
         description: "Blueprints Dagger module version"
         required: false
         type: string
-        default: v1.71.0
+        default: v1.81.0
       sops-module-version:
         description: "SOPS Dagger module version"
         required: false
         type: string
-        default: v0.82.1
+        default: v0.98.0
 
 jobs:
   Flux-Bootstrap:
