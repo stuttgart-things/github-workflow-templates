@@ -6,7 +6,7 @@ on:
       runs-on:
         required: false
         type: string
-        default: dagger-labul
+        default: dagger-labda
       environment-name:
         required: false
         type: string
