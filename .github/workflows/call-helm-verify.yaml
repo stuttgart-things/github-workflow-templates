@@ -1,0 +1,137 @@
+---
+name: Helm Chart Verification with Dagger
+on:
+  workflow_call:
+    inputs:
+      runs-on:
+        required: false
+        type: string
+        default: dagger-labda
+      environment-name:
+        required: false
+        type: string
+        default: k8s
+      chart-path:
+        description: "Path to the Helm chart (relative to repo root)"
+        required: true
+        type: string
+      values-file:
+        description: "Optional path to a values file (e.g. ci/default-values.yaml)"
+        required: false
+        type: string
+        default: ""
+      policy-dir:
+        description: "Optional path to a Rego policy directory. When set, conftest runs."
+        required: false
+        type: string
+        default: ""
+      schema-locations:
+        description: >-
+          Optional comma-separated list of kubeconform --schema-location values.
+          Leave empty to use the module default (k8s + Datree CRDs-catalog).
+        required: false
+        type: string
+        default: ""
+      run-polaris:
+        description: "Run Polaris validate-chart (advisory; does not fail the job)"
+        required: false
+        type: boolean
+        default: false
+      polaris-severity:
+        description: "Polaris severity threshold (ignore/warning/danger/error)"
+        required: false
+        type: string
+        default: "error"
+      branch-name:
+        description: "Git branch to check out"
+        required: false
+        type: string
+        default: main
+      dagger-version:
+        description: "Dagger CLI version"
+        required: false
+        type: string
+        default: "0.20.6"
+      helm-module-version:
+        description: "Version of stuttgart-things/dagger/helm to invoke"
+        required: false
+        type: string
+        default: v0.99.0
+
+permissions:
+  contents: read
+
+jobs:
+  Helm-Verify:
+    name: Helm Verify (${{ inputs.chart-path }})
+    runs-on: ${{ inputs.runs-on }}
+    environment: ${{ inputs.environment-name }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6.0.2
+        with:
+          fetch-depth: 0
+          ref: ${{ inputs.branch-name }}
+
+      - name: Helm Lint
+        uses: dagger/dagger-for-github@v8.4.1
+        with:
+          version: ${{ inputs.dagger-version }}
+          verb: call
+          module: github.com/stuttgart-things/dagger/helm@${{ inputs.helm-module-version }}
+          args: >-
+            lint
+            --src ${{ inputs.chart-path }}
+          cloud-token: ${{ secrets.DAGGER_CLOUD_TOKEN }}
+
+      - name: Helm Kubeconform
+        uses: dagger/dagger-for-github@v8.4.1
+        with:
+          version: ${{ inputs.dagger-version }}
+          verb: call
+          module: github.com/stuttgart-things/dagger/helm@${{ inputs.helm-module-version }}
+          args: >-
+            kubeconform
+            --src ${{ inputs.chart-path }}
+            ${{ inputs.values-file != '' && format('--values-file {0}', inputs.values-file) || '' }}
+            ${{ inputs.schema-locations != '' && format('--schema-locations {0}', inputs.schema-locations) || '' }}
+          cloud-token: ${{ secrets.DAGGER_CLOUD_TOKEN }}
+
+      - name: Helm Conftest
+        if: inputs.policy-dir != ''
+        uses: dagger/dagger-for-github@v8.4.1
+        with:
+          version: ${{ inputs.dagger-version }}
+          verb: call
+          module: github.com/stuttgart-things/dagger/helm@${{ inputs.helm-module-version }}
+          args: >-
+            conftest
+            --src ${{ inputs.chart-path }}
+            --policy-dir ${{ inputs.policy-dir }}
+            ${{ inputs.values-file != '' && format('--values-file {0}', inputs.values-file) || '' }}
+          cloud-token: ${{ secrets.DAGGER_CLOUD_TOKEN }}
+
+      - name: Helm Validate (Polaris, advisory)
+        if: inputs.run-polaris
+        continue-on-error: true
+        uses: dagger/dagger-for-github@v8.4.1
+        with:
+          version: ${{ inputs.dagger-version }}
+          verb: call
+          module: github.com/stuttgart-things/dagger/helm@${{ inputs.helm-module-version }}
+          args: >-
+            validate-chart
+            --src ${{ inputs.chart-path }}
+            --severity ${{ inputs.polaris-severity }}
+            ${{ inputs.values-file != '' && format('--values-file {0}', inputs.values-file) || '' }}
+            export --path /tmp/polaris.json
+          cloud-token: ${{ secrets.DAGGER_CLOUD_TOKEN }}
+
+      - name: Upload Polaris report
+        if: inputs.run-polaris && always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: polaris-${{ inputs.chart-path }}
+          path: /tmp/polaris.json
+          if-no-files-found: ignore
+          retention-days: 30
