@@ -1,0 +1,222 @@
+---
+name: Terraform Vault Execution with Dagger-Rendered tfvars
+on:
+  workflow_call:
+    inputs:
+      lab:
+        description: "Lab identifier used to resolve secret paths (e.g. labul, labda)"
+        required: true
+        type: string
+      cluster-name:
+        description: "Target cluster name (e.g. philly). Used for kubeconfig path, backend suffix, and tf cluster_name var"
+        required: true
+        type: string
+      runs-on:
+        required: false
+        type: string
+        default: dagger-labul
+      environment-name:
+        required: false
+        type: string
+        default: k8s
+      source-repo:
+        description: "Repository containing the SOPS-encrypted secrets and terraform config (owner/repo)"
+        required: true
+        type: string
+      terraform-dir:
+        description: "Directory containing the Terraform config"
+        required: false
+        type: string
+        default: terraform/vault/cluster-issuer
+      operation:
+        description: "Terraform operation (apply|destroy|plan)"
+        required: false
+        type: string
+        default: apply
+      branch-name:
+        required: false
+        type: string
+        default: main
+      dagger-version:
+        required: false
+        type: string
+        default: "0.20.6"
+      blueprints-version:
+        required: false
+        type: string
+        default: v1.82.0
+      sops-module-version:
+        required: false
+        type: string
+        default: v0.90.1
+      working-image:
+        required: false
+        type: string
+        default: ghcr.io/stuttgart-things/sthings-terraform:1.10.3-2.6.15
+      send-to-homerun:
+        required: false
+        type: boolean
+        default: true
+  workflow_dispatch:
+    inputs:
+      lab:
+        description: "Lab (e.g. labul, labda)"
+        required: true
+        type: choice
+        options: [labul, labda]
+      cluster-name:
+        description: "Target cluster name (e.g. philly)"
+        required: true
+        type: string
+      source-repo:
+        description: "owner/repo containing secrets + terraform"
+        required: true
+        type: string
+      terraform-dir:
+        description: "Terraform config directory"
+        required: false
+        type: string
+        default: terraform/vault/cluster-issuer
+      operation:
+        required: false
+        type: choice
+        options: [apply, destroy, plan]
+        default: apply
+      branch-name:
+        required: false
+        type: string
+        default: main
+
+env:
+  KUBE_CONFIG_ENC: secrets/kubeconfigs/${{ inputs.cluster-name }}.yaml
+  ENCRYPTED_ENV: secrets/envs/vault-infra-${{ inputs.lab }}.enc.yaml
+  TFVARS_TEMPLATE: secrets/envs/vault-ca-terraform-tfvars.json.tmpl
+  TF_DIR: ${{ inputs.terraform-dir }}
+
+jobs:
+  Render-Secrets:
+    name: Decrypt kubeconfig and render secrets
+    runs-on: ${{ inputs.runs-on }}
+    environment: ${{ inputs.environment-name }}
+    steps:
+      - name: Checkout source repo
+        uses: actions/checkout@v6.0.2
+        with:
+          repository: ${{ inputs.source-repo }}
+          token: ${{ secrets.GH_TOKEN }}
+          fetch-depth: '0'
+          ref: ${{ inputs.branch-name }}
+
+      - name: Decrypt kubeconfig with SOPS (via Dagger)
+        uses: dagger/dagger-for-github@v8.4.1
+        env:
+          SOPS_AGE_KEY: ${{ secrets.SOPS_AGE_KEY }}
+        with:
+          version: ${{ inputs.dagger-version }}
+          verb: call
+          module: github.com/stuttgart-things/dagger/sops@${{ inputs.sops-module-version }}
+          args: >-
+            decrypt
+            --age-key env:SOPS_AGE_KEY
+            --encrypted-file ${{ env.KUBE_CONFIG_ENC }}
+            export --path kubeconfig
+          cloud-token: ${{ secrets.DAGGER_CLOUD_TOKEN }}
+
+      - name: Render secrets JSON (plaintext)
+        uses: dagger/dagger-for-github@v8.4.1
+        env:
+          SOPS_AGE_KEY: ${{ secrets.SOPS_AGE_KEY }}
+        with:
+          version: ${{ inputs.dagger-version }}
+          verb: call
+          module: github.com/stuttgart-things/blueprints/configuration@${{ inputs.blueprints-version }}
+          args: >-
+            create-secrets-file
+            --age-key env:SOPS_AGE_KEY
+            --encrypted-data-file ${{ env.ENCRYPTED_ENV }}
+            --template-file ${{ env.TFVARS_TEMPLATE }}
+            --encrypt=false
+            export --path rendered-secrets.json
+          cloud-token: ${{ secrets.DAGGER_CLOUD_TOKEN }}
+
+      - name: Upload rendered workspace
+        uses: actions/upload-artifact@v4
+        with:
+          name: tf-workspace
+          path: |
+            kubeconfig
+            rendered-secrets.json
+          include-hidden-files: true
+          retention-days: 1
+
+  Execute-Terraform:
+    name: Terraform ${{ inputs.operation }}
+    needs: Render-Secrets
+    runs-on: ${{ inputs.runs-on }}
+    environment: ${{ inputs.environment-name }}
+    container:
+      image: ${{ inputs.working-image }}
+    steps:
+      - name: Checkout source repo
+        uses: actions/checkout@v6.0.2
+        with:
+          repository: ${{ inputs.source-repo }}
+          token: ${{ secrets.GH_TOKEN }}
+          fetch-depth: '0'
+          ref: ${{ inputs.branch-name }}
+
+      - name: Download rendered workspace
+        uses: actions/download-artifact@v4
+        with:
+          name: tf-workspace
+          path: ./_rendered
+
+      - name: Stage kubeconfig
+        run: |
+          mkdir -p /tmp
+          cp ./_rendered/kubeconfig /tmp/kubeconfig
+          chmod 600 /tmp/kubeconfig
+        shell: bash
+
+      - name: Export VAULT_* env vars + stash CA bundle from rendered secrets
+        run: |
+          {
+            echo "VAULT_TOKEN=$(jq -r '.VAULT_TOKEN'             ./_rendered/rendered-secrets.json)"
+            echo "VAULT_ADDR=$(jq -r '.VAULT_ADDR'               ./_rendered/rendered-secrets.json)"
+            echo "VAULT_SKIP_VERIFY=$(jq -r '.VAULT_SKIP_VERIFY' ./_rendered/rendered-secrets.json)"
+          } >> "$GITHUB_ENV"
+          jq -r '.vault_ca_bundle' ./_rendered/rendered-secrets.json > /tmp/vault_ca_bundle
+        shell: bash
+
+      - name: Terraform init
+        run: |
+          terraform --version
+          terraform -chdir="${TF_DIR}" init -upgrade \
+            -backend-config="config_path=/tmp/kubeconfig" \
+            -backend-config="secret_suffix=${{ inputs.cluster-name }}"
+        shell: bash
+
+      - name: Terraform ${{ inputs.operation }}
+        run: |
+          terraform -chdir="${TF_DIR}" \
+            ${{ inputs.operation }} \
+            -auto-approve \
+            -compact-warnings \
+            -var="cluster_name=${{ inputs.cluster-name }}" \
+            -var="kubeconfig_path=/tmp/kubeconfig" \
+            -var="vault_addr=${VAULT_ADDR}" \
+            -var="vault_ca_bundle=$(cat /tmp/vault_ca_bundle)"
+        shell: bash
+
+      - name: Send Message To Homerun
+        if: always() && inputs.send-to-homerun
+        uses: stuttgart-things/github-workflow-templates/actions/send-homerun-message@main
+        with:
+          url: "https://homerun.homerun-dev.sthings-vsphere.labul.sva.de/generic"
+          secretToken: "${{ secrets.HOMERUN_TOKEN }}"
+          title: "[TERRAFORM-VAULT][${{ inputs.operation }}]-${{ inputs.lab }}/${{ inputs.cluster-name }}-${{ job.status }}"
+          message: "REPO: ${{ inputs.source-repo }} BRANCH: ${{ inputs.branch-name }} LAB: ${{ inputs.lab }} CLUSTER: ${{ inputs.cluster-name }} OP: ${{ inputs.operation }}"
+          severity: ${{ job.status == 'success' && 'SUCCESS' || 'ERROR' }}
+          artifacts: "${{ env.TF_DIR }}"
+          tags: "github,terraform,vault,${{ inputs.lab }},${{ inputs.cluster-name }},${{ inputs.operation }}"
+          assigneeName: "${{ github.actor }}"
