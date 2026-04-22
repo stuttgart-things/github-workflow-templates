@@ -73,6 +73,23 @@ jobs:
           fetch-depth: 0
           ref: ${{ inputs.branch-name }}
 
+      - name: Resolve values file
+        id: values
+        # If the caller passes `values-file` explicitly, use it.
+        # Otherwise fall back to `<chart-path>/ci/default-values.yaml`
+        # when it exists (chart-testing convention, per issue #233).
+        run: |
+          set -eu
+          explicit='${{ inputs.values-file }}'
+          convention="${{ inputs.chart-path }}/ci/default-values.yaml"
+          if [ -n "$explicit" ]; then
+            echo "file=$explicit" >> "$GITHUB_OUTPUT"
+          elif [ -f "$convention" ]; then
+            echo "file=$convention" >> "$GITHUB_OUTPUT"
+          else
+            echo "file=" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Helm Lint
         uses: dagger/dagger-for-github@v8.4.1
         with:
@@ -93,7 +110,7 @@ jobs:
           args: >-
             kubeconform
             --src ${{ inputs.chart-path }}
-            ${{ inputs.values-file != '' && format('--values-file {0}', inputs.values-file) || '' }}
+            ${{ steps.values.outputs.file != '' && format('--values-file {0}', steps.values.outputs.file) || '' }}
             ${{ inputs.schema-locations != '' && format('--schema-locations {0}', inputs.schema-locations) || '' }}
           cloud-token: ${{ secrets.DAGGER_CLOUD_TOKEN }}
 
@@ -108,7 +125,7 @@ jobs:
             conftest
             --src ${{ inputs.chart-path }}
             --policy-dir ${{ inputs.policy-dir }}
-            ${{ inputs.values-file != '' && format('--values-file {0}', inputs.values-file) || '' }}
+            ${{ steps.values.outputs.file != '' && format('--values-file {0}', steps.values.outputs.file) || '' }}
           cloud-token: ${{ secrets.DAGGER_CLOUD_TOKEN }}
 
       - name: Helm Validate (Polaris, advisory)
@@ -123,7 +140,7 @@ jobs:
             validate-chart
             --src ${{ inputs.chart-path }}
             --severity ${{ inputs.polaris-severity }}
-            ${{ inputs.values-file != '' && format('--values-file {0}', inputs.values-file) || '' }}
+            ${{ steps.values.outputs.file != '' && format('--values-file {0}', steps.values.outputs.file) || '' }}
             export --path /tmp/polaris.json
           cloud-token: ${{ secrets.DAGGER_CLOUD_TOKEN }}
 
