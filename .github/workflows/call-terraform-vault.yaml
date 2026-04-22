@@ -12,10 +12,10 @@ on:
         required: true
         type: string
       executor:
-        description: "How to run terraform (cli = native on runner, dagger = blueprints TerraformApply)"
+        description: "How to run terraform (dagger = blueprints TerraformApply, cli = native on runner)"
         required: false
         type: string
-        default: cli
+        default: dagger
       runs-on:
         required: false
         type: string
@@ -70,8 +70,8 @@ on:
         description: "cli = native terraform on runner, dagger = blueprints TerraformApply inside container"
         required: false
         type: choice
-        options: [cli, dagger]
-        default: cli
+        options: [dagger, cli]
+        default: dagger
       source-repo:
         required: true
         type: string
