@@ -139,12 +139,18 @@ jobs:
         shell: bash
         run: |
           set -eo pipefail
+          VT=$(jq -r '.VAULT_TOKEN'       /tmp/rendered-secrets.json)
+          VA=$(jq -r '.VAULT_ADDR'        /tmp/rendered-secrets.json)
+          VS=$(jq -r '.VAULT_SKIP_VERIFY' /tmp/rendered-secrets.json)
+          CA=$(jq -r '.vault_ca_bundle'   /tmp/rendered-secrets.json)
+          echo "::add-mask::${VT}"
+          echo "::add-mask::${CA}"
           {
-            echo "VAULT_TOKEN=$(jq -r '.VAULT_TOKEN'             /tmp/rendered-secrets.json)"
-            echo "VAULT_ADDR=$(jq -r '.VAULT_ADDR'               /tmp/rendered-secrets.json)"
-            echo "VAULT_SKIP_VERIFY=$(jq -r '.VAULT_SKIP_VERIFY' /tmp/rendered-secrets.json)"
+            echo "VAULT_TOKEN=${VT}"
+            echo "VAULT_ADDR=${VA}"
+            echo "VAULT_SKIP_VERIFY=${VS}"
           } >> "$GITHUB_ENV"
-          jq -r '.vault_ca_bundle' /tmp/rendered-secrets.json > /tmp/vault_ca_bundle
+          printf '%s' "${CA}" > /tmp/vault_ca_bundle
           chmod 600 /tmp/vault_ca_bundle
           rm -f /tmp/rendered-secrets.json
 
