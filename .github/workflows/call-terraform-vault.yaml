@@ -49,14 +49,10 @@ on:
         required: false
         type: string
         default: v0.90.1
-      working-image:
+      terraform-version:
         required: false
         type: string
-        default: ghcr.io/stuttgart-things/sthings-terraform:1.10.3-2.6.15
-      send-to-homerun:
-        required: false
-        type: boolean
-        default: true
+        default: "1.14.9"
   workflow_dispatch:
     inputs:
       lab:
@@ -154,8 +150,6 @@ jobs:
     needs: Render-Secrets
     runs-on: ${{ inputs.runs-on }}
     environment: ${{ inputs.environment-name }}
-    container:
-      image: ${{ inputs.working-image }}
     steps:
       - name: Checkout source repo
         uses: actions/checkout@v6.0.2
@@ -164,6 +158,12 @@ jobs:
           token: ${{ secrets.GH_TOKEN }}
           fetch-depth: '0'
           ref: ${{ inputs.branch-name }}
+
+      - name: Install Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ inputs.terraform-version }}
+          terraform_wrapper: false
 
       - name: Download rendered workspace
         uses: actions/download-artifact@v4
@@ -208,15 +208,3 @@ jobs:
             -var="vault_ca_bundle=$(cat /tmp/vault_ca_bundle)"
         shell: bash
 
-      - name: Send Message To Homerun
-        if: always() && inputs.send-to-homerun
-        uses: stuttgart-things/github-workflow-templates/actions/send-homerun-message@main
-        with:
-          url: "https://homerun.homerun-dev.sthings-vsphere.labul.sva.de/generic"
-          secretToken: "${{ secrets.HOMERUN_TOKEN }}"
-          title: "[TERRAFORM-VAULT][${{ inputs.operation }}]-${{ inputs.lab }}/${{ inputs.cluster-name }}-${{ job.status }}"
-          message: "REPO: ${{ inputs.source-repo }} BRANCH: ${{ inputs.branch-name }} LAB: ${{ inputs.lab }} CLUSTER: ${{ inputs.cluster-name }} OP: ${{ inputs.operation }}"
-          severity: ${{ job.status == 'success' && 'SUCCESS' || 'ERROR' }}
-          artifacts: "${{ env.TF_DIR }}"
-          tags: "github,terraform,vault,${{ inputs.lab }},${{ inputs.cluster-name }},${{ inputs.operation }}"
-          assigneeName: "${{ github.actor }}"
