@@ -1,16 +1,21 @@
 ---
-name: Terraform Vault Execution (native terraform on runner)
+name: Terraform Vault Execution (cli or dagger executor)
 on:
   workflow_call:
     inputs:
       lab:
-        description: "Lab identifier used to resolve secret paths (e.g. labul, labda)"
+        description: "Lab identifier (labul, labda)"
         required: true
         type: string
       cluster-name:
         description: "Target cluster name (e.g. philly)"
         required: true
         type: string
+      executor:
+        description: "How to run terraform (cli = native on runner, dagger = blueprints TerraformApply)"
+        required: false
+        type: string
+        default: cli
       runs-on:
         required: false
         type: string
@@ -24,12 +29,11 @@ on:
         required: true
         type: string
       terraform-dir:
-        description: "Directory containing the Terraform config"
         required: false
         type: string
         default: terraform/vault/cluster-issuer
       operation:
-        description: "Terraform operation (apply|destroy|plan)"
+        description: "Terraform operation (plan|apply|destroy). plan is CLI-only."
         required: false
         type: string
         default: apply
@@ -62,6 +66,12 @@ on:
       cluster-name:
         required: true
         type: string
+      executor:
+        description: "cli = native terraform on runner, dagger = blueprints TerraformApply inside container"
+        required: false
+        type: choice
+        options: [cli, dagger]
+        default: cli
       source-repo:
         required: true
         type: string
@@ -84,10 +94,25 @@ env:
   ENCRYPTED_ENV: secrets/envs/vault-infra-${{ inputs.lab }}.enc.yaml
   TFVARS_TEMPLATE: secrets/envs/vault-ca-terraform-tfvars.json.tmpl
   TF_DIR: ${{ inputs.terraform-dir }}
+  CONTAINER_KUBECONFIG: /root/.kube/config
 
 jobs:
-  Terraform-Vault:
-    name: Terraform ${{ inputs.operation }}
+  Validate-Inputs:
+    name: Validate executor/operation combination
+    runs-on: ${{ inputs.runs-on }}
+    steps:
+      - name: Reject unsupported combinations
+        shell: bash
+        run: |
+          if [[ "${{ inputs.executor }}" == "dagger" && "${{ inputs.operation }}" == "plan" ]]; then
+            echo "::error::executor=dagger does not support operation=plan (dagger/terraform Execute has no plan op). Use executor=cli."
+            exit 1
+          fi
+
+  Terraform-CLI:
+    name: Terraform ${{ inputs.operation }} (cli)
+    needs: Validate-Inputs
+    if: inputs.executor == 'cli'
     runs-on: ${{ inputs.runs-on }}
     environment: ${{ inputs.environment-name }}
     steps:
@@ -193,3 +218,70 @@ jobs:
         if: always()
         shell: bash
         run: rm -f /tmp/kubeconfig /tmp/vault_ca_bundle /tmp/rendered-secrets.json /tmp/dagger-*.err
+
+  Terraform-Dagger:
+    name: Terraform ${{ inputs.operation }} (dagger)
+    needs: Validate-Inputs
+    if: inputs.executor == 'dagger'
+    runs-on: ${{ inputs.runs-on }}
+    environment: ${{ inputs.environment-name }}
+    steps:
+      - name: Checkout source repo
+        uses: actions/checkout@v6.0.2
+        with:
+          repository: ${{ inputs.source-repo }}
+          token: ${{ secrets.GH_TOKEN }}
+          fetch-depth: '0'
+          ref: ${{ inputs.branch-name }}
+
+      - name: Render + SOPS-encrypt tfvars JSON into terraform dir
+        uses: dagger/dagger-for-github@v8.4.1
+        env:
+          SOPS_AGE_KEY: ${{ secrets.SOPS_AGE_KEY }}
+          AGE_PUB: ${{ secrets.AGE_PUB }}
+        with:
+          version: ${{ inputs.dagger-version }}
+          verb: call
+          module: github.com/stuttgart-things/blueprints/configuration@${{ inputs.blueprints-version }}
+          args: >-
+            create-secrets-file
+            --age-key env:SOPS_AGE_KEY
+            --age-recipient env:AGE_PUB
+            --encrypted-data-file ${{ env.ENCRYPTED_ENV }}
+            --template-file ${{ env.TFVARS_TEMPLATE }}
+            --encrypt=true
+            --file-extension json
+            export --path ${{ env.TF_DIR }}/terraform.tfvars.sops.json
+          cloud-token: ${{ secrets.DAGGER_CLOUD_TOKEN }}
+
+      - name: Generate backend_override.tf
+        shell: bash
+        run: |
+          cat > "${TF_DIR}/backend_override.tf" <<EOF
+          terraform {
+            backend "kubernetes" {
+              namespace     = "kube-system"
+              config_path   = "${CONTAINER_KUBECONFIG}"
+              secret_suffix = "${{ inputs.cluster-name }}"
+            }
+          }
+          EOF
+
+      - name: Terraform ${{ inputs.operation }} via Dagger TerraformApply
+        uses: dagger/dagger-for-github@v8.4.1
+        env:
+          SOPS_AGE_KEY: ${{ secrets.SOPS_AGE_KEY }}
+        with:
+          version: ${{ inputs.dagger-version }}
+          verb: call
+          module: github.com/stuttgart-things/blueprints/configuration@${{ inputs.blueprints-version }}
+          args: >-
+            terraform-apply
+            --terraform-dir ${{ env.TF_DIR }}
+            --sops-age-key env:SOPS_AGE_KEY
+            --encrypted-files terraform.tfvars.sops.json
+            --encrypted-kube-config ${{ env.KUBE_CONFIG_ENC }}
+            --kube-config-path ${{ env.CONTAINER_KUBECONFIG }}
+            --operation ${{ inputs.operation }}
+            --variables "cluster_name=${{ inputs.cluster-name }},kubeconfig_path=${{ env.CONTAINER_KUBECONFIG }}"
+          cloud-token: ${{ secrets.DAGGER_CLOUD_TOKEN }}
