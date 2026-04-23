@@ -1,0 +1,59 @@
+---
+name: Validate JSON Schema with Dagger
+on:
+  workflow_call:
+    inputs:
+      runs-on:
+        required: false
+        type: string
+        default: dagger-labda
+      environment-name:
+        required: false
+        type: string
+        default: k8s
+      src:
+        description: "Directory to scan (relative to repo root)"
+        required: false
+        type: string
+        default: "."
+      glob:
+        description: "Basename glob passed to the Dagger module (default **/*.schema.json)"
+        required: false
+        type: string
+        default: ""
+      dagger-version:
+        description: "Dagger CLI version"
+        required: false
+        type: string
+        default: "0.20.6"
+      linting-module-version:
+        description: "Version of stuttgart-things/dagger/linting to invoke"
+        required: false
+        type: string
+        default: v0.100.0
+
+permissions:
+  contents: read
+
+jobs:
+  Validate-Json-Schema:
+    name: Validate JSON Schema (${{ inputs.src }})
+    runs-on: ${{ inputs.runs-on }}
+    environment: ${{ inputs.environment-name }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6.0.2
+        with:
+          fetch-depth: 0
+
+      - name: Validate JSON Schema
+        uses: dagger/dagger-for-github@v8.4.1
+        with:
+          version: ${{ inputs.dagger-version }}
+          verb: call
+          module: github.com/stuttgart-things/dagger/linting@${{ inputs.linting-module-version }}
+          args: >-
+            validate-json-schema
+            --src ${{ inputs.src }}
+            ${{ inputs.glob != '' && format('--glob {0}', inputs.glob) || '' }}
+          cloud-token: ${{ secrets.DAGGER_CLOUD_TOKEN }}
