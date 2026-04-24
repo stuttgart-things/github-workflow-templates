@@ -1,0 +1,83 @@
+---
+name: ArgoCD Catalog Verification with Dagger
+on:
+  workflow_call:
+    inputs:
+      runs-on:
+        required: false
+        type: string
+        default: dagger-labda
+      environment-name:
+        required: false
+        type: string
+        default: k8s
+      src:
+        description: "Path to the ArgoCD catalog root (app-of-apps tree)"
+        required: false
+        type: string
+        default: "."
+      schema-locations:
+        description: >-
+          Optional repeatable kubeconform --schema-locations values, one per line.
+          Leave empty to use the module default (k8s + Datree CRDs-catalog).
+        required: false
+        type: string
+        default: ""
+      dagger-version:
+        description: "Dagger CLI version"
+        required: false
+        type: string
+        default: "0.20.6"
+      argocd-module-version:
+        description: "Version of stuttgart-things/dagger/argocd to invoke"
+        required: false
+        type: string
+        default: v0.102.0
+
+permissions:
+  contents: read
+
+jobs:
+  ArgoCD-Verify-Catalog:
+    name: ArgoCD Verify Catalog (${{ inputs.src }})
+    runs-on: ${{ inputs.runs-on }}
+    environment: ${{ inputs.environment-name }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6.0.2
+        with:
+          fetch-depth: 0
+
+      - name: Build schema-locations args
+        id: schemas
+        # verify-catalog takes --schema-locations as a repeatable flag.
+        # Accept a newline-separated list and expand it into repeated flags.
+        run: |
+          set -eu
+          raw='${{ inputs.schema-locations }}'
+          args=""
+          if [ -n "$raw" ]; then
+            while IFS= read -r line; do
+              [ -z "$line" ] && continue
+              args="$args --schema-locations $line"
+            done <<EOF
+          $raw
+          EOF
+          fi
+          {
+            echo "args<<__EOF__"
+            echo "$args"
+            echo "__EOF__"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Verify Catalog
+        uses: dagger/dagger-for-github@v8.4.1
+        with:
+          version: ${{ inputs.dagger-version }}
+          verb: call
+          module: github.com/stuttgart-things/dagger/argocd@${{ inputs.argocd-module-version }}
+          args: >-
+            verify-catalog
+            --src ${{ inputs.src }}
+            ${{ steps.schemas.outputs.args }}
+          cloud-token: ${{ secrets.DAGGER_CLOUD_TOKEN }}
