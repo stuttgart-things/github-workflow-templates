@@ -1,0 +1,57 @@
+---
+name: Dagger Security Scan (gosec)
+on:
+  workflow_call:
+    inputs:
+      runs-on:
+        default: ubuntu-latest
+        type: string
+      working-directory:
+        default: "."
+        type: string
+        description: "Directory containing Go source to scan (passed as --src)"
+      dagger-module:
+        default: "github.com/stuttgart-things/dagger/go"
+        type: string
+      dagger-version:
+        default: "0.16.2"
+        type: string
+      secure-go-version:
+        default: "2.24.6"
+        type: string
+      artifact-name:
+        default: "security-report"
+        type: string
+      continue-on-error:
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+jobs:
+  security-scan:
+    name: gosec via Dagger
+    runs-on: ${{ inputs.runs-on }}
+    continue-on-error: ${{ inputs.continue-on-error }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Run gosec
+        uses: dagger/dagger-for-github@v8.4.1
+        with:
+          version: ${{ inputs.dagger-version }}
+          module: ${{ inputs.dagger-module }}
+          args: >-
+            security-scan
+            --src ${{ inputs.working-directory }}
+            --secure-go-version ${{ inputs.secure-go-version }}
+            export --path ./security-report.txt
+
+      - name: Upload report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ inputs.artifact-name }}
+          path: security-report.txt

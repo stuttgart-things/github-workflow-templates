@@ -1,0 +1,81 @@
+---
+name: Build & Push Container Image (Dagger KoBuild)
+on:
+  workflow_call:
+    inputs:
+      runs-on:
+        default: ubuntu-latest
+        type: string
+      working-directory:
+        default: "."
+        type: string
+        description: "Directory containing go.mod (passed as --src)"
+      build-path:
+        default: "."
+        type: string
+        description: "Ko importpath to build (e.g. ./cmd/myapp)"
+      image-repo:
+        required: true
+        type: string
+        description: "Target image repo (e.g. ttl.sh/myapp-abc123)"
+      ko-version:
+        default: "v0.18.0"
+        type: string
+      push:
+        default: "true"
+        type: string
+      dagger-module:
+        default: "github.com/stuttgart-things/dagger/go"
+        type: string
+      dagger-version:
+        default: "0.16.2"
+        type: string
+    outputs:
+      image-ref:
+        description: "Fully-qualified pushed image reference"
+        value: ${{ jobs.build.outputs.image-ref }}
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build:
+    name: KoBuild via Dagger
+    runs-on: ${{ inputs.runs-on }}
+    outputs:
+      image-ref: ${{ steps.ko.outputs.image-ref }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Install Dagger CLI
+        uses: dagger/dagger-for-github@v8.4.1
+        with:
+          version: ${{ inputs.dagger-version }}
+          call: version
+
+      - name: Build and push image
+        id: ko
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          REF=$(dagger call -m "${{ inputs.dagger-module }}" \
+            ko-build \
+            --src "${{ inputs.working-directory }}" \
+            --build-arg "${{ inputs.build-path }}" \
+            --repo "${{ inputs.image-repo }}" \
+            --ko-version "${{ inputs.ko-version }}" \
+            --push "${{ inputs.push }}" \
+            --token-name GITHUB_TOKEN \
+            --token env:GITHUB_TOKEN)
+          echo "image-ref=$REF" >> "$GITHUB_OUTPUT"
+          echo "Built: $REF"
+
+      - name: Summary
+        run: |
+          {
+            echo "## Dagger KoBuild"
+            echo ""
+            echo "**Image:** \`${{ steps.ko.outputs.image-ref }}\`"
+          } >> "$GITHUB_STEP_SUMMARY"
