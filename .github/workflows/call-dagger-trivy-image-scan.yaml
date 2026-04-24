@@ -7,9 +7,13 @@ on:
         default: ubuntu-latest
         type: string
       image-ref:
-        required: true
+        default: ""
         type: string
-        description: "Image reference to scan (e.g. ttl.sh/app:tag)"
+        description: "Image reference to scan. Either this or image-ref-artifact must be set."
+      image-ref-artifact:
+        default: ""
+        type: string
+        description: "Name of a previously-uploaded artifact containing a single image-ref.txt file; takes precedence over image-ref."
       severity:
         default: "HIGH,CRITICAL"
         type: string
@@ -38,6 +42,27 @@ jobs:
     runs-on: ${{ inputs.runs-on }}
     continue-on-error: ${{ inputs.continue-on-error }}
     steps:
+      - name: Download image ref artifact
+        if: ${{ inputs.image-ref-artifact != '' }}
+        uses: actions/download-artifact@v5
+        with:
+          name: ${{ inputs.image-ref-artifact }}
+
+      - name: Resolve image ref
+        id: ref
+        run: |
+          if [[ -n "${{ inputs.image-ref-artifact }}" ]]; then
+            REF=$(cat image-ref.txt)
+          else
+            REF='${{ inputs.image-ref }}'
+          fi
+          if [[ -z "$REF" ]]; then
+            echo "::error::Neither image-ref nor image-ref-artifact resolved to a value"
+            exit 1
+          fi
+          echo "image-ref=$REF" >> "$GITHUB_OUTPUT"
+          echo "Scanning: $REF"
+
       - name: Scan image
         uses: dagger/dagger-for-github@v8.4.1
         with:
@@ -45,7 +70,7 @@ jobs:
           module: ${{ inputs.dagger-module }}
           args: >-
             scan-image
-            --image-ref ${{ inputs.image-ref }}
+            --image-ref ${{ steps.ref.outputs.image-ref }}
             --severity ${{ inputs.severity }}
             --trivy-version ${{ inputs.trivy-version }}
             export --path ./trivy-image-report.txt

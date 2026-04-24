@@ -32,6 +32,10 @@ on:
       dagger-version:
         default: "0.20.6"
         type: string
+      image-ref-artifact:
+        default: ""
+        type: string
+        description: "If set, upload the pushed image ref to an artifact with this name (for consumption by a downstream scan job)"
     outputs:
       image-ref:
         description: "Fully-qualified pushed image reference"
@@ -73,6 +77,17 @@ jobs:
             --token env:GITHUB_TOKEN)
           echo "image-ref=$REF" >> "$GITHUB_OUTPUT"
           echo "Built: $REF"
+
+      - name: Write image ref file
+        if: ${{ inputs.image-ref-artifact != '' }}
+        run: printf '%s' '${{ steps.ko.outputs.image-ref }}' > image-ref.txt
+
+      - name: Upload image ref artifact
+        if: ${{ inputs.image-ref-artifact != '' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ inputs.image-ref-artifact }}
+          path: image-ref.txt
 
       - name: Summary
         run: |
