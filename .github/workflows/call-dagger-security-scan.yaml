@@ -11,10 +11,10 @@ on:
         type: string
         description: "Directory containing Go source to scan (passed as --src)"
       dagger-module:
-        default: "github.com/stuttgart-things/dagger/go"
+        default: "github.com/stuttgart-things/dagger/go@v0.103.0"
         type: string
       dagger-version:
-        default: "0.16.2"
+        default: "0.20.6"
         type: string
       secure-go-version:
         default: "2.24.6"

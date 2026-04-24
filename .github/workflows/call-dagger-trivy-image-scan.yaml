@@ -17,10 +17,10 @@ on:
         default: "0.64.1"
         type: string
       dagger-module:
-        default: "github.com/stuttgart-things/dagger/trivy"
+        default: "github.com/stuttgart-things/dagger/trivy@v0.103.0"
         type: string
       dagger-version:
-        default: "0.20.0"
+        default: "0.20.6"
         type: string
       artifact-name:
         default: "trivy-image-report"

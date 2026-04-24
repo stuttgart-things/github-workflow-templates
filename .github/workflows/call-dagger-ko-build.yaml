@@ -19,16 +19,18 @@ on:
         type: string
         description: "Target image repo (e.g. ttl.sh/myapp-abc123)"
       ko-version:
-        default: "v0.18.0"
+        # Ko SHA that ships Go >= 1.26 (same value used in the repo Taskfile).
+        # Bump in lockstep with the workflow modules' go.mod.
+        default: "1c688bd6325d7b041fdc7d1be092f96054c35d39"  # pragma: allowlist secret
         type: string
       push:
         default: "true"
         type: string
       dagger-module:
-        default: "github.com/stuttgart-things/dagger/go"
+        default: "github.com/stuttgart-things/dagger/go@v0.103.0"
         type: string
       dagger-version:
-        default: "0.16.2"
+        default: "0.20.6"
         type: string
     outputs:
       image-ref:
