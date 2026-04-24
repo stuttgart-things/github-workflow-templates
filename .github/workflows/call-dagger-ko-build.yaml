@@ -50,10 +50,10 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Install Dagger CLI
-        uses: dagger/dagger-for-github@v8.4.1
-        with:
-          version: ${{ inputs.dagger-version }}
-          call: version
+        run: |
+          curl -fsSL https://dl.dagger.io/dagger/install.sh \
+            | BIN_DIR=$HOME/.local/bin DAGGER_VERSION="${{ inputs.dagger-version }}" sh
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
 
       - name: Build and push image
         id: ko
