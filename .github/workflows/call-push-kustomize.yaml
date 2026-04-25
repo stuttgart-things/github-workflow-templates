@@ -1,0 +1,83 @@
+---
+name: Push Kustomize OCI Base
+on:
+  workflow_call:
+    inputs:
+      runs-on:
+        default: ubuntu-latest
+        type: string
+      kcl-source-dir:
+        default: kcl
+        type: string
+        description: "KCL source directory (passed as --source)"
+      kcl-profile-file:
+        default: tests/kcl-deploy-profile.yaml
+        type: string
+        description: "KCL profile file (passed as --parameters-file)"
+      kustomize-oci-repo:
+        required: true
+        type: string
+        description: "OCI repo to push, e.g. ghcr.io/<org>/<repo>-kustomize"
+      tag:
+        required: true
+        type: string
+        description: "Tag to push, e.g. pr-42-abc1234 or v1.2.3"
+      dagger-kcl-module:
+        default: github.com/stuttgart-things/dagger/kcl@v0.103.0
+        type: string
+      dagger-version:
+        default: "0.20.6"
+        type: string
+    outputs:
+      artifact-ref:
+        description: "Fully-qualified pushed kustomize OCI artifact reference"
+        value: ${{ jobs.push.outputs.artifact-ref }}
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+jobs:
+  push:
+    name: Push kustomize base via Dagger
+    runs-on: ${{ inputs.runs-on }}
+    outputs:
+      artifact-ref: ${{ steps.ref.outputs.artifact-ref }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Push kustomize base
+        uses: dagger/dagger-for-github@v8.4.1
+        with:
+          version: ${{ inputs.dagger-version }}
+          module: ${{ inputs.dagger-kcl-module }}
+          call: >-
+            push-kustomize-base
+            --source ./${{ inputs.kcl-source-dir }}
+            --parameters-file ./${{ inputs.kcl-profile-file }}
+            --address ${{ inputs.kustomize-oci-repo }}
+            --tag ${{ inputs.tag }}
+            --user env:GITHUB_USER
+            --password env:GITHUB_TOKEN
+          cloud-token: ${{ secrets.DAGGER_CLOUD_TOKEN }}
+        env:
+          GITHUB_USER: ${{ github.actor }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Resolve artifact ref
+        id: ref
+        run: |
+          REF="${{ inputs.kustomize-oci-repo }}:${{ inputs.tag }}"
+          echo "artifact-ref=${REF}" >> "$GITHUB_OUTPUT"
+
+      - name: Summary
+        run: |
+          {
+            echo "## Kustomize OCI Push"
+            echo ""
+            echo "**Artifact:** \`${{ steps.ref.outputs.artifact-ref }}\`"
+          } >> "$GITHUB_STEP_SUMMARY"
