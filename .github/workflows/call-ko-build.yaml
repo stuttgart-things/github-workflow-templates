@@ -20,6 +20,29 @@ on:
         default: "."
         type: string
         description: "Directory containing go.mod (for mono-repos)"
+      registry:
+        default: ttl.sh
+        type: string
+        description: "Target registry: ttl.sh (ephemeral, default) or ghcr.io"
+      image-repo:
+        default: ""
+        type: string
+        description: |
+          Image repo path under the registry. For ghcr.io defaults to
+          <owner>/<repo>; for ttl.sh defaults to <repo>-<random6hex>.
+      tags:
+        default: latest
+        type: string
+        description: "Comma-separated tags to push (e.g. pr-42-abc1234,latest)"
+      push:
+        default: true
+        type: boolean
+        description: "Push the image (false = build only, useful for forks)"
+    outputs:
+      image-ref:
+        description: "Fully-qualified pushed image reference (repo:firsttag)"
+        value: ${{ jobs.build.outputs.image-ref }}
+
 permissions:
   contents: read
   packages: write
@@ -28,6 +51,8 @@ jobs:
   build:
     name: Build, Scan & Push Image
     runs-on: ${{ inputs.runs-on }}
+    outputs:
+      image-ref: ${{ steps.image-repo.outputs.image-ref }}
 
     steps:
       - name: Checkout
@@ -42,13 +67,33 @@ jobs:
       - name: Set up Ko
         uses: ko-build/setup-ko@v0.9
 
+      - name: Login to GHCR
+        if: inputs.registry == 'ghcr.io' && inputs.push
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | ko login ghcr.io -u ${{ github.actor }} --password-stdin
+
       - name: Set image repository
         id: image-repo
         run: |
-          REPO_NAME="${{ github.event.repository.name }}"
-          RANDOM_TAG=$(openssl rand -hex 6)
-          echo "repo=ttl.sh/${REPO_NAME}-${RANDOM_TAG}" >> $GITHUB_OUTPUT
-          echo "tag=latest" >> $GITHUB_OUTPUT
+          REGISTRY="${{ inputs.registry }}"
+          IMAGE_REPO="${{ inputs.image-repo }}"
+          TAGS="${{ inputs.tags }}"
+
+          if [ "$REGISTRY" = "ttl.sh" ]; then
+            if [ -z "$IMAGE_REPO" ]; then
+              IMAGE_REPO="${{ github.event.repository.name }}-$(openssl rand -hex 6)"
+            fi
+          else
+            if [ -z "$IMAGE_REPO" ]; then
+              IMAGE_REPO="${{ github.repository }}"
+            fi
+          fi
+
+          REPO="${REGISTRY}/${IMAGE_REPO}"
+          FIRST_TAG="${TAGS%%,*}"
+
+          echo "repo=${REPO}" >> $GITHUB_OUTPUT
+          echo "tags=${TAGS}" >> $GITHUB_OUTPUT
+          echo "image-ref=${REPO}:${FIRST_TAG}" >> $GITHUB_OUTPUT
 
       - name: Set build metadata
         id: build-meta
@@ -60,8 +105,11 @@ jobs:
       - name: Build and push image
         working-directory: ${{ inputs.working-directory }}
         run: |
-          ko build --bare --tags=${{ steps.image-repo.outputs.tag }} ${{ inputs.build-path }} \
-            --platform=${{ inputs.platforms }}
+          ko build --bare \
+            --tags=${{ steps.image-repo.outputs.tags }} \
+            --push=${{ inputs.push }} \
+            --platform=${{ inputs.platforms }} \
+            ${{ inputs.build-path }}
         env:
           KO_DOCKER_REPO: ${{ steps.image-repo.outputs.repo }}
           VERSION: ${{ steps.build-meta.outputs.version }}
@@ -70,14 +118,17 @@ jobs:
 
       - name: Image Summary
         run: |
-          IMAGE="${{ steps.image-repo.outputs.repo }}:${{ steps.image-repo.outputs.tag }}"
+          IMAGE="${{ steps.image-repo.outputs.image-ref }}"
           echo "## Container Image Build Complete" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Image:** \`${IMAGE}\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Tags:** \`${{ steps.image-repo.outputs.tags }}\`" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Pull command:**" >> $GITHUB_STEP_SUMMARY
           echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
           echo "docker pull ${IMAGE}" >> $GITHUB_STEP_SUMMARY
           echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Note:** ttl.sh images expire after 1 hour" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ inputs.registry }}" = "ttl.sh" ]; then
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "**Note:** ttl.sh images expire after 1 hour" >> $GITHUB_STEP_SUMMARY
+          fi

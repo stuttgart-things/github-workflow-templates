@@ -47,6 +47,76 @@ jobs:
 
 </details>
 
+<details><summary>KO BUILD (ttl.sh / ghcr.io)</summary>
+
+```yaml
+jobs:
+  build-image:
+    name: Build & Push Image
+    uses: stuttgart-things/github-workflow-templates/.github/workflows/call-ko-build.yaml@main
+    with:
+      registry: ghcr.io
+      image-repo: ${{ github.repository }}
+      tags: pr-${{ github.event.number }}-${{ github.event.pull_request.head.sha }}
+      push: true
+      build-path: ./cmd/myapp
+    secrets: inherit
+```
+
+Defaults to `registry: ttl.sh` with a random repo + `tag=latest` for throwaway smoke runs.
+When `registry: ghcr.io` the workflow uses `GITHUB_TOKEN` to log in (caller must declare
+`packages: write`). The first tag is exposed as the `image-ref` workflow output for
+downstream scan/deploy/PR-comment jobs.
+
+</details>
+
+<details><summary>PUSH KUSTOMIZE OCI BASE</summary>
+
+```yaml
+jobs:
+  push-kustomize:
+    name: Push Kustomize OCI Base
+    uses: stuttgart-things/github-workflow-templates/.github/workflows/call-push-kustomize.yaml@main
+    with:
+      kcl-source-dir: kcl
+      kcl-profile-file: tests/kcl-deploy-profile.yaml
+      kustomize-oci-repo: ghcr.io/${{ github.repository }}-kustomize
+      tag: pr-${{ github.event.number }}-${{ github.event.pull_request.head.sha }}
+    secrets: inherit
+```
+
+Wraps `dagger call -m <kcl-module> push-kustomize-base` for callers that need a
+PR-coordinated kustomize artifact on every push (the release-only path lives in
+`call-go-release.yaml`). The pushed `address:tag` is exposed as the `artifact-ref`
+workflow output.
+
+</details>
+
+<details><summary>CLEANUP PR-TAGGED GHCR ARTIFACTS</summary>
+
+```yaml
+on:
+  pull_request:
+    types: [closed]
+
+jobs:
+  cleanup:
+    name: Delete PR-tagged GHCR versions
+    uses: stuttgart-things/github-workflow-templates/.github/workflows/call-cleanup-pr-artifacts.yaml@main
+    with:
+      packages: |
+        myrepo
+        myrepo-kustomize
+    secrets: inherit
+```
+
+Defaults to deleting every GHCR version whose tag starts with `pr-<num>-` for the
+closed PR. Set `dry-run: true` first to preview matches. Override `tag-pattern`
+for custom tagging schemes. GHCR retains PR-tagged versions forever otherwise,
+so wire this up alongside any workflow that pushes `pr-<num>-<sha>` artifacts.
+
+</details>
+
 <details><summary>YAML LINT</summary>
 
 ```yaml

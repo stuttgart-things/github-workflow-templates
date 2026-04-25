@@ -1,0 +1,93 @@
+---
+name: Cleanup PR-tagged GHCR Artifacts
+on:
+  workflow_call:
+    inputs:
+      runs-on:
+        default: ubuntu-latest
+        type: string
+      packages:
+        required: true
+        type: string
+        description: |
+          Newline- or comma-separated list of GHCR package names to clean,
+          e.g. "myrepo,myrepo-kustomize". Owner is taken from github.repository_owner.
+      package-type:
+        default: container
+        type: string
+        description: "GHCR package type (container | maven | npm | rubygems | nuget)"
+      tag-pattern:
+        default: 'pr-${{ github.event.number }}-'
+        type: string
+        description: |
+          Tag prefix to delete. Default deletes all versions whose tags start
+          with `pr-<num>-` for the closed PR. Override for custom schemes.
+      dry-run:
+        default: false
+        type: boolean
+        description: "List matching versions without deleting"
+
+permissions:
+  packages: write
+
+jobs:
+  cleanup:
+    name: Delete PR-tagged versions
+    runs-on: ${{ inputs.runs-on }}
+    steps:
+      - name: Delete versions
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          OWNER: ${{ github.repository_owner }}
+          PACKAGES: ${{ inputs.packages }}
+          PACKAGE_TYPE: ${{ inputs.package-type }}
+          TAG_PATTERN: ${{ inputs.tag-pattern }}
+          DRY_RUN: ${{ inputs.dry-run }}
+        run: |
+          set -euo pipefail
+          PKGS=$(echo "$PACKAGES" | tr ',\n' ' ')
+          for PKG in $PKGS; do
+            [ -z "$PKG" ] && continue
+            echo "::group::Package ${PKG}"
+
+            # GHCR uses URL-encoded slashes for package names with paths
+            ENCODED=$(echo "$PKG" | sed 's|/|%2F|g')
+            API="/orgs/${OWNER}/packages/${PACKAGE_TYPE}/${ENCODED}/versions"
+
+            # Fall back to user-scoped API if org call 404s
+            if ! gh api "$API" --paginate >/tmp/versions.json 2>/dev/null; then
+              API="/users/${OWNER}/packages/${PACKAGE_TYPE}/${ENCODED}/versions"
+              gh api "$API" --paginate >/tmp/versions.json
+            fi
+
+            MATCHED=$(jq -r --arg p "$TAG_PATTERN" \
+              '.[] | select(.metadata.container.tags // [] | any(startswith($p))) | "\(.id)\t\(.metadata.container.tags | join(","))"' \
+              /tmp/versions.json)
+
+            if [ -z "$MATCHED" ]; then
+              echo "No versions match pattern: ${TAG_PATTERN}"
+              echo "::endgroup::"
+              continue
+            fi
+
+            echo "$MATCHED" | while IFS=$'\t' read -r ID TAGS; do
+              if [ "$DRY_RUN" = "true" ]; then
+                echo "[dry-run] would delete version ${ID} (tags: ${TAGS})"
+              else
+                echo "Deleting version ${ID} (tags: ${TAGS})"
+                gh api -X DELETE "${API}/${ID}"
+              fi
+            done
+
+            echo "::endgroup::"
+          done
+
+      - name: Summary
+        run: |
+          {
+            echo "## PR Artifact Cleanup"
+            echo ""
+            echo "**Packages:** \`${{ inputs.packages }}\`"
+            echo "**Tag pattern:** \`${{ inputs.tag-pattern }}\`"
+            echo "**Dry run:** \`${{ inputs.dry-run }}\`"
+          } >> "$GITHUB_STEP_SUMMARY"
