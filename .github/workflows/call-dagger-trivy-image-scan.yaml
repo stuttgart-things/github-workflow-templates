@@ -47,7 +47,7 @@ jobs:
     steps:
       - name: Download image ref artifact
         if: ${{ inputs.image-ref-artifact != '' }}
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v8
         with:
           name: ${{ inputs.image-ref-artifact }}
 
