@@ -50,12 +50,12 @@ on:
         description: "Blueprints Dagger module version"
         required: false
         type: string
-        default: v1.81.0
+        default: v1.85.0
       sops-module-version:
         description: "SOPS Dagger module version"
         required: false
         type: string
-        default: v0.98.0
+        default: v0.110.0
 
 jobs:
   Flux-Bootstrap:
@@ -96,7 +96,7 @@ jobs:
         with:
           version: ${{ inputs.dagger-version }}
           verb: call
-          module: github.com/stuttgart-things/blueprints/kubernetes-deployment@${{ inputs.blueprints-version }}
+          module: github.com/stuttgart-things/blueprints/flux@${{ inputs.blueprints-version }}
           args: >-
             flux-bootstrap
             --kube-config file:///tmp/kubeconfig
