@@ -1,0 +1,101 @@
+---
+name: ArgoCD Bootstrap (Render Kubeconfig Secret) with Dagger
+on:
+  workflow_call:
+    inputs:
+      runs-on:
+        required: false
+        type: string
+        default: dagger-labda
+      environment-name:
+        required: false
+        type: string
+        default: k8s
+      source-repo:
+        description: "Repository containing the SOPS-encrypted kubeconfig (owner/repo)"
+        required: true
+        type: string
+      branch-name:
+        description: "Git branch to checkout"
+        required: false
+        type: string
+        default: main
+      source-file:
+        description: "Path to SOPS-encrypted kubeconfig in the checked-out repo (e.g. secrets/kubeconfigs/kind-dev-test1.yaml)"
+        required: true
+        type: string
+      name:
+        description: "Name of the rendered ArgoCD cluster secret (e.g. kind-dev-test1)"
+        required: true
+        type: string
+      namespace:
+        description: "Namespace for the rendered ArgoCD cluster secret"
+        required: false
+        type: string
+        default: argocd
+      output-path:
+        description: "Export path for the rendered (SOPS-encrypted) ArgoCD secret"
+        required: false
+        type: string
+        default: /tmp/argocd/cluster.secret.enc.yaml
+      dagger-version:
+        description: "Dagger CLI version"
+        required: false
+        type: string
+        default: "0.20.6"
+      argocd-module-version:
+        description: "Version of stuttgart-things/blueprints/argocd to invoke"
+        required: false
+        type: string
+        default: v2.1.0
+      artifact-name:
+        description: "If set, upload the rendered secret as an artifact with this name"
+        required: false
+        type: string
+        default: ""
+
+permissions:
+  contents: read
+
+jobs:
+  ArgoCD-Bootstrap:
+    name: ArgoCD Render Kubeconfig Secret
+    runs-on: ${{ inputs.runs-on }}
+    environment: ${{ inputs.environment-name }}
+    steps:
+      - name: Checkout source repo
+        uses: actions/checkout@v6.0.2
+        with:
+          repository: ${{ inputs.source-repo }}
+          token: ${{ secrets.GH_TOKEN }}
+          fetch-depth: '0'
+          ref: ${{ inputs.branch-name }}
+
+      - name: Render ArgoCD cluster secret with Dagger
+        uses: dagger/dagger-for-github@v8.4.1
+        env:
+          SOPS_AGE_KEY: ${{ secrets.SOPS_AGE_KEY }}
+          AGE_PUB: ${{ secrets.AGE_PUB }}
+        with:
+          version: ${{ inputs.dagger-version }}
+          verb: call
+          module: github.com/stuttgart-things/blueprints/argocd@${{ inputs.argocd-module-version }}
+          args: >-
+            render-kubeconfig-secret
+            --source-file ${{ inputs.source-file }}
+            --sops-key env:SOPS_AGE_KEY
+            --age-public-key env:AGE_PUB
+            --name ${{ inputs.name }}
+            --namespace ${{ inputs.namespace }}
+            export --path ${{ inputs.output-path }}
+          cloud-token: ${{ secrets.DAGGER_CLOUD_TOKEN }}
+
+      - name: Show rendered secret
+        run: cat ${{ inputs.output-path }}
+
+      - name: Upload rendered secret
+        if: ${{ inputs.artifact-name != '' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ inputs.artifact-name }}
+          path: ${{ inputs.output-path }}
