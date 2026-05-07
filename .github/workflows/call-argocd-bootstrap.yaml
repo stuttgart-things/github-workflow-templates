@@ -1,8 +1,185 @@
 ---
-name: ArgoCD Bootstrap (Render Kubeconfig Secret) with Dagger
+name: ArgoCD Bootstrap (Clusterbook Cluster) with Dagger
 on:
   workflow_call:
     inputs:
+      # --- Source / checkout ---
+      source-repo:
+        description: "Repository containing values-file and (optionally) the SOPS-encrypted kubeconfig (owner/repo)"
+        required: true
+        type: string
+      branch-name:
+        description: "Git branch to checkout"
+        required: false
+        type: string
+        default: main
+
+      # --- Primary inputs (most params should come from values-file) ---
+      values-file:
+        description: "Path to KCL parameters YAML/JSON file in the checked-out repo"
+        required: false
+        type: string
+        default: ""
+      name:
+        description: "Cluster name (override; required when no values-file)"
+        required: false
+        type: string
+        default: ""
+      network-key:
+        description: "/24 network key (e.g. 10.31.101). Overrides values-file."
+        required: false
+        type: string
+        default: ""
+
+      # --- Toggles ---
+      detect-network-key:
+        description: "Auto-detect network-key from kubeconfig (requires kubeconfig-source-file)"
+        required: false
+        type: boolean
+        default: false
+      render-kubeconfig-secret:
+        description: "Render a v1/Secret wrapping the SOPS-encrypted kubeconfig source file"
+        required: false
+        type: boolean
+        default: false
+      deploy:
+        description: "Apply the rendered config to a cluster"
+        required: false
+        type: boolean
+        default: false
+      commit-to-git:
+        description: "Commit the rendered config to a Git repository"
+        required: false
+        type: boolean
+        default: false
+      create-pr:
+        description: "Open a PR after commit"
+        required: false
+        type: boolean
+        default: false
+      merge-pr:
+        description: "Auto-merge the PR after creation"
+        required: false
+        type: boolean
+        default: false
+
+      # --- Kubeconfig (used for render-kubeconfig-secret / deploy / detect-network-key) ---
+      kubeconfig-source-file:
+        description: "Path to SOPS-encrypted kubeconfig in the checked-out repo"
+        required: false
+        type: string
+        default: ""
+      kubeconfig-data-key:
+        description: "Data key under data: in the rendered Secret"
+        required: false
+        type: string
+        default: kubeconfig
+      kubeconfig-file-name:
+        description: "File name to use when committing the kubeconfig Secret"
+        required: false
+        type: string
+        default: kubeconfig.yaml
+      deploy-namespace:
+        description: "Target namespace for the apply step"
+        required: false
+        type: string
+        default: argocd
+
+      # --- Commit / PR ---
+      repository:
+        description: "Target repo (owner/repo) for commit-to-git"
+        required: false
+        type: string
+        default: ""
+      commit-branch-name:
+        description: "Branch to commit to"
+        required: false
+        type: string
+        default: main
+      destination-path:
+        description: "Destination folder within the target repository"
+        required: false
+        type: string
+        default: argocd/clusters/
+      file-name:
+        description: "Cluster config file name to commit"
+        required: false
+        type: string
+        default: cluster.yaml
+      commit-message:
+        description: "Commit message"
+        required: false
+        type: string
+        default: "Add Argo CD cluster registration"
+      base-branch:
+        description: "PR base branch"
+        required: false
+        type: string
+        default: main
+      pr-title:
+        description: "PR title"
+        required: false
+        type: string
+        default: ""
+      pr-body:
+        description: "PR body"
+        required: false
+        type: string
+        default: ""
+      merge-method:
+        description: "PR merge method (squash | merge | rebase)"
+        required: false
+        type: string
+        default: squash
+
+      # --- Render overrides (rarely needed; defaults handled by Dagger module) ---
+      cluster-name:
+        required: false
+        type: string
+        default: ""
+      cluster-labels:
+        description: 'JSON object literal, e.g. {"env":"lab"}'
+        required: false
+        type: string
+        default: ""
+      kubeconfig-secret-name:
+        required: false
+        type: string
+        default: ""
+      kubeconfig-secret-namespace:
+        required: false
+        type: string
+        default: ""
+      argocd-namespace:
+        required: false
+        type: string
+        default: ""
+      provider-config-name:
+        required: false
+        type: string
+        default: ""
+      oci-source:
+        required: false
+        type: string
+        default: ""
+      entrypoint:
+        required: false
+        type: string
+        default: ""
+
+      # --- Output ---
+      output-path:
+        description: "Export path for the rendered cluster config"
+        required: false
+        type: string
+        default: /tmp/argocd/cluster.yaml
+      artifact-name:
+        description: "If set, upload the rendered cluster config as an artifact"
+        required: false
+        type: string
+        default: ""
+
+      # --- Runtime / versions ---
       runs-on:
         required: false
         type: string
@@ -11,55 +188,27 @@ on:
         required: false
         type: string
         default: k8s
-      source-repo:
-        description: "Repository containing the SOPS-encrypted kubeconfig (owner/repo)"
-        required: true
-        type: string
-      branch-name:
-        description: "Git branch to checkout"
-        required: false
-        type: string
-        default: main
-      source-file:
-        description: "Path to SOPS-encrypted kubeconfig in the checked-out repo (e.g. secrets/kubeconfigs/kind-dev-test1.yaml)"
-        required: true
-        type: string
-      name:
-        description: "Name of the rendered ArgoCD cluster secret (e.g. kind-dev-test1)"
-        required: true
-        type: string
-      namespace:
-        description: "Namespace for the rendered ArgoCD cluster secret"
-        required: false
-        type: string
-        default: argocd
-      output-path:
-        description: "Export path for the rendered (SOPS-encrypted) ArgoCD secret"
-        required: false
-        type: string
-        default: /tmp/argocd/cluster.secret.enc.yaml
       dagger-version:
-        description: "Dagger CLI version"
         required: false
         type: string
         default: "0.20.6"
       argocd-module-version:
-        description: "Version of stuttgart-things/blueprints/argocd to invoke"
+        description: "Version of stuttgart-things/blueprints/argocd"
         required: false
         type: string
         default: v2.1.0
-      artifact-name:
-        description: "If set, upload the rendered secret as an artifact with this name"
+      sops-module-version:
+        description: "Version of stuttgart-things/dagger/sops (for kubeconfig decrypt step)"
         required: false
         type: string
-        default: ""
+        default: v0.110.0
 
 permissions:
   contents: read
 
 jobs:
   ArgoCD-Bootstrap:
-    name: ArgoCD Render Kubeconfig Secret
+    name: ArgoCD Bootstrap Clusterbook
     runs-on: ${{ inputs.runs-on }}
     environment: ${{ inputs.environment-name }}
     steps:
@@ -71,29 +220,108 @@ jobs:
           fetch-depth: '0'
           ref: ${{ inputs.branch-name }}
 
-      - name: Render ArgoCD cluster secret with Dagger
+      - name: Decrypt kubeconfig (for deploy / detect-network-key)
+        if: ${{ (inputs.deploy || inputs.detect-network-key) && inputs.kubeconfig-source-file != '' }}
         uses: dagger/dagger-for-github@v8.4.1
         env:
           SOPS_AGE_KEY: ${{ secrets.SOPS_AGE_KEY }}
-          AGE_PUB: ${{ secrets.AGE_PUB }}
         with:
           version: ${{ inputs.dagger-version }}
           verb: call
-          module: github.com/stuttgart-things/blueprints/argocd@${{ inputs.argocd-module-version }}
+          module: github.com/stuttgart-things/dagger/sops@${{ inputs.sops-module-version }}
           args: >-
-            render-kubeconfig-secret
-            --source-file ${{ inputs.source-file }}
-            --sops-key env:SOPS_AGE_KEY
-            --age-public-key env:AGE_PUB
-            --name ${{ inputs.name }}
-            --namespace ${{ inputs.namespace }}
-            export --path ${{ inputs.output-path }}
+            decrypt
+            --age-key env:SOPS_AGE_KEY
+            --encrypted-file ${{ inputs.kubeconfig-source-file }}
+            export --path /tmp/kubeconfig
           cloud-token: ${{ secrets.DAGGER_CLOUD_TOKEN }}
 
-      - name: Show rendered secret
-        run: cat ${{ inputs.output-path }}
+      - name: Install Dagger CLI
+        run: |
+          curl -fsSL https://dl.dagger.io/dagger/install.sh \
+            | BIN_DIR=$HOME/.local/bin DAGGER_VERSION="${{ inputs.dagger-version }}" sh
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
 
-      - name: Upload rendered secret
+      - name: Bootstrap Clusterbook Cluster
+        env:
+          DAGGER_CLOUD_TOKEN: ${{ secrets.DAGGER_CLOUD_TOKEN }}
+          SOPS_AGE_KEY: ${{ secrets.SOPS_AGE_KEY }}
+          AGE_PUB: ${{ secrets.AGE_PUB }}
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+        run: |
+          set -eu
+          mkdir -p "$(dirname "${{ inputs.output-path }}")"
+
+          ARGS=(bootstrap-clusterbook-cluster)
+
+          # Render params
+          [[ -n "${{ inputs.values-file }}" ]] && ARGS+=(--values-file "${{ inputs.values-file }}")
+          [[ -n "${{ inputs.name }}" ]] && ARGS+=(--name "${{ inputs.name }}")
+          [[ -n "${{ inputs.network-key }}" ]] && ARGS+=(--network-key "${{ inputs.network-key }}")
+          [[ -n "${{ inputs.cluster-name }}" ]] && ARGS+=(--cluster-name "${{ inputs.cluster-name }}")
+          [[ -n "${{ inputs.cluster-labels }}" ]] && ARGS+=(--cluster-labels "${{ inputs.cluster-labels }}")
+          [[ -n "${{ inputs.kubeconfig-secret-name }}" ]] && ARGS+=(--kubeconfig-secret-name "${{ inputs.kubeconfig-secret-name }}")
+          [[ -n "${{ inputs.kubeconfig-secret-namespace }}" ]] && ARGS+=(--kubeconfig-secret-namespace "${{ inputs.kubeconfig-secret-namespace }}")
+          [[ -n "${{ inputs.argocd-namespace }}" ]] && ARGS+=(--argocd-namespace "${{ inputs.argocd-namespace }}")
+          [[ -n "${{ inputs.provider-config-name }}" ]] && ARGS+=(--provider-config-name "${{ inputs.provider-config-name }}")
+          [[ -n "${{ inputs.oci-source }}" ]] && ARGS+=(--oci-source "${{ inputs.oci-source }}")
+          [[ -n "${{ inputs.entrypoint }}" ]] && ARGS+=(--entrypoint "${{ inputs.entrypoint }}")
+
+          # Toggles (only set when true; module defaults all false)
+          [[ "${{ inputs.detect-network-key }}" == "true" ]] && ARGS+=(--detect-network-key=true)
+          [[ "${{ inputs.render-kubeconfig-secret }}" == "true" ]] && ARGS+=(--render-kubeconfig-secret=true)
+          [[ "${{ inputs.deploy }}" == "true" ]] && ARGS+=(--deploy=true --deploy-namespace "${{ inputs.deploy-namespace }}")
+          [[ "${{ inputs.commit-to-git }}" == "true" ]] && ARGS+=(--commit-to-git=true)
+          [[ "${{ inputs.create-pr }}" == "true" ]] && ARGS+=(--create-pr=true)
+          [[ "${{ inputs.merge-pr }}" == "true" ]] && ARGS+=(--merge-pr=true)
+
+          # Kubeconfig source file + age keys (for render-kubeconfig-secret)
+          if [[ "${{ inputs.render-kubeconfig-secret }}" == "true" ]]; then
+            [[ -n "${{ inputs.kubeconfig-source-file }}" ]] && ARGS+=(--kubeconfig-source-file "${{ inputs.kubeconfig-source-file }}")
+            ARGS+=(--sops-key env:SOPS_AGE_KEY)
+            ARGS+=(--age-public-key env:AGE_PUB)
+            ARGS+=(--kubeconfig-data-key "${{ inputs.kubeconfig-data-key }}")
+            ARGS+=(--kubeconfig-file-name "${{ inputs.kubeconfig-file-name }}")
+          fi
+
+          # Plaintext kubeconfig Secret (for deploy / detect-network-key)
+          if [[ "${{ inputs.deploy }}" == "true" || "${{ inputs.detect-network-key }}" == "true" ]]; then
+            if [[ -f /tmp/kubeconfig ]]; then
+              ARGS+=(--kube-config file:///tmp/kubeconfig)
+            else
+              echo "::error::deploy/detect-network-key requested but /tmp/kubeconfig not found (set kubeconfig-source-file)"
+              exit 1
+            fi
+          fi
+
+          # Commit / PR
+          if [[ "${{ inputs.commit-to-git }}" == "true" ]]; then
+            ARGS+=(--repository "${{ inputs.repository }}")
+            ARGS+=(--git-token env:GH_TOKEN)
+            ARGS+=(--branch-name "${{ inputs.commit-branch-name }}")
+            ARGS+=(--destination-path "${{ inputs.destination-path }}")
+            ARGS+=(--file-name "${{ inputs.file-name }}")
+            ARGS+=(--commit-message "${{ inputs.commit-message }}")
+            ARGS+=(--base-branch "${{ inputs.base-branch }}")
+            [[ -n "${{ inputs.pr-title }}" ]] && ARGS+=(--pr-title "${{ inputs.pr-title }}")
+            [[ -n "${{ inputs.pr-body }}" ]] && ARGS+=(--pr-body "${{ inputs.pr-body }}")
+            ARGS+=(--merge-method "${{ inputs.merge-method }}")
+          fi
+
+          MODULE="github.com/stuttgart-things/blueprints/argocd@${{ inputs.argocd-module-version }}"
+          echo "Running: dagger call -m $MODULE ${ARGS[*]} export --path ${{ inputs.output-path }}"
+          dagger call -m "$MODULE" "${ARGS[@]}" export --path "${{ inputs.output-path }}"
+
+      - name: Show rendered cluster config
+        if: always()
+        run: |
+          if [[ -f "${{ inputs.output-path }}" ]]; then
+            cat "${{ inputs.output-path }}"
+          else
+            echo "No output file at ${{ inputs.output-path }}"
+          fi
+
+      - name: Upload rendered config
         if: ${{ inputs.artifact-name != '' }}
         uses: actions/upload-artifact@v7
         with:
