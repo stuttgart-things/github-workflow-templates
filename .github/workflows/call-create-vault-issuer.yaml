@@ -1,0 +1,118 @@
+---
+name: Create Vault-PKI ClusterIssuer prerequisites with Dagger
+on:
+  workflow_call:
+    inputs:
+      # --- Source / checkout ---
+      source-repo:
+        description: "Repository containing the SOPS-encrypted kubeconfig + vault env file (owner/repo)"
+        required: true
+        type: string
+      branch-name:
+        description: "Git branch to checkout"
+        required: false
+        type: string
+        default: main
+
+      # --- Required ---
+      cluster-name:
+        description: "Target cluster name (used as Vault token's display_name)"
+        required: true
+        type: string
+      kubeconfig-source-file:
+        description: "Path to SOPS-encrypted kubeconfig of the target cluster (relative to source-repo)"
+        required: true
+        type: string
+      vault-env-file:
+        description: "Path to SOPS-encrypted Vault env yaml (vaultAddr / vaultToken / vaultSkipVerify / optional vaultCaBundle)"
+        required: true
+        type: string
+
+      # --- Optional knobs (defaults match the Dagger function) ---
+      pki-role:
+        description: "Vault PKI role name"
+        required: false
+        type: string
+        default: "sthings-vsphere"
+      policy-name:
+        description: "Vault ACL policy name to upsert"
+        required: false
+        type: string
+        default: "pki-issue"
+      target-namespace:
+        description: "Namespace to create + place the cert-manager Secrets in"
+        required: false
+        type: string
+        default: "cert-manager"
+      token-secret-name:
+        description: "Name of the Secret containing the Vault token"
+        required: false
+        type: string
+        default: "cert-manager-vault-token"
+      ca-secret-name:
+        description: "Name of the Secret containing the PKI CA bundle"
+        required: false
+        type: string
+        default: "vault-pki-ca"
+      token-ttl:
+        description: "TTL for the minted Vault token (renewable)"
+        required: false
+        type: string
+        default: "8760h"
+
+      # --- Runtime / versions ---
+      runs-on:
+        required: false
+        type: string
+        default: dagger-labda
+      environment-name:
+        required: false
+        type: string
+        default: k8s
+      dagger-version:
+        required: false
+        type: string
+        default: "0.20.8"
+      argocd-module-version:
+        description: "Version of stuttgart-things/blueprints/argocd"
+        required: false
+        type: string
+        default: v2.2.1
+
+permissions:
+  contents: read
+
+jobs:
+  Create-Vault-Issuer:
+    name: Create Vault-PKI ClusterIssuer Prerequisites
+    runs-on: ${{ inputs.runs-on }}
+    environment: ${{ inputs.environment-name }}
+    steps:
+      - name: Checkout source repo
+        uses: actions/checkout@v6.0.2
+        with:
+          repository: ${{ inputs.source-repo }}
+          token: ${{ secrets.GH_TOKEN }}
+          ref: ${{ inputs.branch-name }}
+
+      - name: Run create-vault-issuer
+        uses: dagger/dagger-for-github@v8.4.1
+        env:
+          SOPS_AGE_KEY: ${{ secrets.SOPS_AGE_KEY }}
+        with:
+          version: ${{ inputs.dagger-version }}
+          verb: call
+          module: github.com/stuttgart-things/blueprints/argocd@${{ inputs.argocd-module-version }}
+          args: >-
+            create-vault-issuer
+            --cluster-name ${{ inputs.cluster-name }}
+            --kubeconfig-source-file ${{ inputs.kubeconfig-source-file }}
+            --vault-env-file ${{ inputs.vault-env-file }}
+            --sops-key env:SOPS_AGE_KEY
+            --pki-role ${{ inputs.pki-role }}
+            --policy-name ${{ inputs.policy-name }}
+            --target-namespace ${{ inputs.target-namespace }}
+            --token-secret-name ${{ inputs.token-secret-name }}
+            --ca-secret-name ${{ inputs.ca-secret-name }}
+            --token-ttl ${{ inputs.token-ttl }}
+          cloud-token: ${{ secrets.DAGGER_CLOUD_TOKEN }}
