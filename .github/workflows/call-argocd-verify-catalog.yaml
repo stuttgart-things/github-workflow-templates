@@ -27,7 +27,7 @@ on:
         description: "Dagger CLI version"
         required: false
         type: string
-        default: "0.20.6"
+        default: "0.20.8"
       argocd-module-version:
         description: "Version of stuttgart-things/dagger/argocd to invoke"
         required: false
