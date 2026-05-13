@@ -196,7 +196,7 @@ on:
         description: "Version of stuttgart-things/blueprints/argocd"
         required: false
         type: string
-        default: v2.2.1
+        default: v2.3.1
       sops-module-version:
         description: "Version of stuttgart-things/dagger/sops (for kubeconfig decrypt step)"
         required: false
@@ -307,6 +307,12 @@ jobs:
             [[ -n "${{ inputs.pr-body }}" ]] && ARGS+=(--pr-body "${{ inputs.pr-body }}")
             ARGS+=(--merge-method "${{ inputs.merge-method }}")
           fi
+
+          # Force a fresh function-level cache key per run. Without this,
+          # Dagger short-circuits the whole bootstrap function on input-hash
+          # match and the inner `gh repo clone` + `git push` side effects
+          # never replay — see stuttgart-things/blueprints#168.
+          ARGS+=(--cache-buster "$(date +%s%N)")
 
           MODULE="github.com/stuttgart-things/blueprints/argocd@${{ inputs.argocd-module-version }}"
           echo "Running: dagger call -m $MODULE ${ARGS[*]} export --path ${{ inputs.output-path }}"
