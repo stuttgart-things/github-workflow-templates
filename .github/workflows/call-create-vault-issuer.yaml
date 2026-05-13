@@ -77,7 +77,7 @@ on:
         description: "Version of stuttgart-things/blueprints/argocd"
         required: false
         type: string
-        default: v2.2.1
+        default: v2.3.1
 
 permissions:
   contents: read
@@ -115,4 +115,5 @@ jobs:
             --token-secret-name ${{ inputs.token-secret-name }}
             --ca-secret-name ${{ inputs.ca-secret-name }}
             --token-ttl ${{ inputs.token-ttl }}
+            --cache-buster ${{ github.run_id }}-${{ github.run_attempt }}
           cloud-token: ${{ secrets.DAGGER_CLOUD_TOKEN }}
