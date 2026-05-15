@@ -46,7 +46,7 @@ jobs:
   comment:
     runs-on: ${{ inputs.runs-on }}
     steps:
-      - uses: actions/github-script@v7
+      - uses: actions/github-script@v9
         env:
           HOSTNAME_PREFIX: ${{ inputs.hostname-prefix }}
           HOSTNAME_DOMAIN: ${{ inputs.hostname-domain }}
