@@ -1,0 +1,105 @@
+---
+name: Comment Preview URL on PR
+on:
+  workflow_call:
+    inputs:
+      runs-on:
+        default: ubuntu-latest
+        type: string
+      hostname-prefix:
+        required: true
+        type: string
+        description: |
+          Hostname prefix per PR, before `-<num>`. The full URL becomes
+          `https://<hostname-prefix>-<num>.<hostname-domain>`. Example: `omni-pr`, `cc-pr`, `scout-pr`.
+      hostname-domain:
+        required: true
+        type: string
+        description: |
+          Domain suffix appended after `<hostname-prefix>-<num>`. Example:
+          `homerun2-dev.sthings-vsphere.labul.sva.de`.
+      namespace-prefix:
+        required: true
+        type: string
+        description: |
+          Kubernetes namespace prefix per PR, before `-<num>`. Example:
+          `homerun2-pr`, `homerun2-core-catcher-pr`, `homerun2-scout-pr`.
+      argocd-app-prefix:
+        default: ""
+        type: string
+        description: |
+          ArgoCD parent Application name prefix per PR, before `-<num>`.
+          Defaults to `namespace-prefix` when empty.
+      argocd-base-url:
+        default: argocd.platform.sthings-vsphere.labul.sva.de
+        type: string
+        description: "Base hostname of the ArgoCD UI (no scheme)."
+      health-path:
+        default: /health
+        type: string
+        description: "Service health endpoint path appended to the preview URL."
+
+permissions:
+  pull-requests: write
+
+jobs:
+  comment:
+    runs-on: ${{ inputs.runs-on }}
+    steps:
+      - uses: actions/github-script@v7
+        env:
+          HOSTNAME_PREFIX: ${{ inputs.hostname-prefix }}
+          HOSTNAME_DOMAIN: ${{ inputs.hostname-domain }}
+          NAMESPACE_PREFIX: ${{ inputs.namespace-prefix }}
+          ARGOCD_APP_PREFIX: ${{ inputs.argocd-app-prefix }}
+          ARGOCD_BASE_URL: ${{ inputs.argocd-base-url }}
+          HEALTH_PATH: ${{ inputs.health-path }}
+        with:
+          script: |
+            const num = context.issue.number;
+            const {
+              HOSTNAME_PREFIX, HOSTNAME_DOMAIN, NAMESPACE_PREFIX,
+              ARGOCD_APP_PREFIX, ARGOCD_BASE_URL, HEALTH_PATH,
+            } = process.env;
+            const appPrefix = ARGOCD_APP_PREFIX || NAMESPACE_PREFIX;
+            const url = `https://${HOSTNAME_PREFIX}-${num}.${HOSTNAME_DOMAIN}`;
+            const ns = `${NAMESPACE_PREFIX}-${num}`;
+            const app = `${appPrefix}-${num}`;
+            const argo = `https://${ARGOCD_BASE_URL}/applications?search=${app}`;
+            const marker = "<!-- preview-url-bot -->";
+            const body = [
+              marker,
+              "## 🚀 Preview environment",
+              "",
+              `| | |`,
+              `|--|--|`,
+              `| URL | ${url} |`,
+              `| Health | ${url}${HEALTH_PATH} |`,
+              `| Namespace | \`${ns}\` |`,
+              `| ArgoCD | [\`${app}\`](${argo}) |`,
+              "",
+              "Spinning up — give it a couple of minutes for image + kustomize OCI builds to publish and for ArgoCD to sync.",
+              "Closing this PR tears the preview down automatically.",
+            ].join("\n");
+
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: num,
+            });
+            const existing = comments.find(c => c.body && c.body.includes(marker));
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: num,
+                body,
+              });
+            }
