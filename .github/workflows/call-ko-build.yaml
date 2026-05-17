@@ -7,7 +7,7 @@ on:
         default: ubuntu-latest
         type: string
       go-version:
-        default: "1.25.5"
+        default: "1.26.0"
         type: string
       platforms:
         default: linux/amd64,linux/arm64
