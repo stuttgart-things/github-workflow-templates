@@ -38,6 +38,19 @@ on:
         default: /health
         type: string
         description: "Service health endpoint path appended to the preview URL."
+      additional-urls:
+        default: ""
+        type: string
+        description: |
+          Optional comma-separated `Label=URL` pairs to append as extra rows
+          in the comment table. Useful when the SUT's hostname isn't the
+          actual review surface — e.g. git-pitcher exposes only /health
+          and /metrics, but the events it produces are reviewed via a
+          co-tenanted core-catcher dashboard. The caller can interpolate
+          `${{ github.event.number }}` into the URL.
+
+          Example:
+            additional-urls: 'Dashboard=https://cc-git-pr-${{ github.event.number }}.homerun2-dev.example.com'
 
 permissions:
   pull-requests: write
@@ -54,18 +67,32 @@ jobs:
           ARGOCD_APP_PREFIX: ${{ inputs.argocd-app-prefix }}
           ARGOCD_BASE_URL: ${{ inputs.argocd-base-url }}
           HEALTH_PATH: ${{ inputs.health-path }}
+          ADDITIONAL_URLS: ${{ inputs.additional-urls }}
         with:
           script: |
             const num = context.issue.number;
             const {
               HOSTNAME_PREFIX, HOSTNAME_DOMAIN, NAMESPACE_PREFIX,
               ARGOCD_APP_PREFIX, ARGOCD_BASE_URL, HEALTH_PATH,
+              ADDITIONAL_URLS,
             } = process.env;
             const appPrefix = ARGOCD_APP_PREFIX || NAMESPACE_PREFIX;
             const url = `https://${HOSTNAME_PREFIX}-${num}.${HOSTNAME_DOMAIN}`;
             const ns = `${NAMESPACE_PREFIX}-${num}`;
             const app = `${appPrefix}-${num}`;
             const argo = `https://${ARGOCD_BASE_URL}/applications?search=${app}`;
+            const extraRows = (ADDITIONAL_URLS || "")
+              .split(",")
+              .map(s => s.trim())
+              .filter(s => s.length > 0)
+              .map(s => {
+                const eq = s.indexOf("=");
+                if (eq < 0) return null;
+                const label = s.slice(0, eq).trim();
+                const value = s.slice(eq + 1).trim();
+                return `| ${label} | ${value} |`;
+              })
+              .filter(Boolean);
             const marker = "<!-- preview-url-bot -->";
             const body = [
               marker,
@@ -75,6 +102,7 @@ jobs:
               `|--|--|`,
               `| URL | ${url} |`,
               `| Health | ${url}${HEALTH_PATH} |`,
+              ...extraRows,
               `| Namespace | \`${ns}\` |`,
               `| ArgoCD | [\`${app}\`](${argo}) |`,
               "",
