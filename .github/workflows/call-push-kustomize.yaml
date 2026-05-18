@@ -23,7 +23,7 @@ on:
         type: string
         description: "Tag to push, e.g. pr-42-abc1234 or v1.2.3"
       dagger-kcl-module:
-        default: github.com/stuttgart-things/dagger/kcl@v0.103.0
+        default: github.com/stuttgart-things/dagger/kcl@v0.114.0
         type: string
       dagger-version:
         default: "0.20.6"
