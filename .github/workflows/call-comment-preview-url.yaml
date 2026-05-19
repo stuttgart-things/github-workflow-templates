@@ -42,15 +42,18 @@ on:
         default: ""
         type: string
         description: |
-          Optional comma-separated `Label=URL` pairs to append as extra rows
+          Optional comma-separated Label=URL pairs to append as extra rows
           in the comment table. Useful when the SUT's hostname isn't the
           actual review surface — e.g. git-pitcher exposes only /health
           and /metrics, but the events it produces are reviewed via a
           co-tenanted core-catcher dashboard. The caller can interpolate
-          `${{ github.event.number }}` into the URL.
+          the PR number expression into the URL.
 
-          Example:
-            additional-urls: 'Dashboard=https://cc-git-pr-${{ github.event.number }}.homerun2-dev.example.com'
+          Example (caller-side, with PR-number interpolation rendered):
+            additional-urls: 'Dashboard=https://cc-git-pr-NUMBER.homerun2-dev.example.com'
+          Replace NUMBER with the standard github.event.number expression
+          on the caller side; embedding the raw expression here would be
+          evaluated at workflow-load time and break parsing.
 
 permissions:
   pull-requests: write
