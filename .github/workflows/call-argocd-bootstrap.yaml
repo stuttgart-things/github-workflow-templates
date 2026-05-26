@@ -196,7 +196,7 @@ on:
         description: "Version of stuttgart-things/blueprints/argocd"
         required: false
         type: string
-        default: v2.3.1
+        default: v2.4.0
       sops-module-version:
         description: "Version of stuttgart-things/dagger/sops (for kubeconfig decrypt step)"
         required: false

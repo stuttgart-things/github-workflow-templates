@@ -1,5 +1,5 @@
 ---
-name: Create Vault-PKI ClusterIssuer prerequisites with Dagger
+name: Create Vault Kubernetes Auth backend (for ESO) with Dagger
 on:
   workflow_call:
     inputs:
@@ -16,7 +16,7 @@ on:
 
       # --- Required ---
       cluster-name:
-        description: "Target cluster name (used as Vault token's display_name)"
+        description: "Target cluster name (prefixes the Vault auth backend path: <cluster-name>-<auth-name>)"
         required: true
         type: string
       kubeconfig-source-file:
@@ -24,41 +24,31 @@ on:
         required: true
         type: string
       vault-env-file:
-        description: "Path to SOPS-encrypted Vault env yaml (vaultAddr / vaultToken / vaultSkipVerify / optional vaultCaBundle)"
+        description: "Path to SOPS-encrypted Vault env yaml (vaultAddr / vaultToken / vaultSkipVerify)"
         required: true
         type: string
 
       # --- Optional knobs (defaults match the Dagger function) ---
-      pki-role:
-        description: "Vault PKI role name"
+      auth-name:
+        description: "Auth backend + role name; also used as SA / SA-token Secret / CRB name on the cluster"
         required: false
         type: string
-        default: "sthings-vsphere"
-      policy-name:
-        description: "Vault ACL policy name to upsert"
+        default: "eso"
+      namespace:
+        description: "Namespace on the target cluster for the SA + SA-token Secret"
         required: false
         type: string
-        default: "pki-issue"
-      target-namespace:
-        description: "Namespace to create + place the cert-manager Secrets in"
+        default: "external-secrets"
+      token-policies:
+        description: "Comma-separated Vault policies to bind to the role (must pre-exist in Vault)"
         required: false
         type: string
-        default: "cert-manager"
-      token-secret-name:
-        description: "Name of the Secret containing the Vault token"
-        required: false
-        type: string
-        default: "cert-manager-vault-token"
-      ca-secret-name:
-        description: "Name of the Secret containing the PKI CA bundle"
-        required: false
-        type: string
-        default: "vault-pki-ca"
+        default: "read-homerun2-pr"
       token-ttl:
-        description: "TTL for the minted Vault token (renewable)"
+        description: "TTL (seconds) for tokens minted via this role"
         required: false
         type: string
-        default: "8760h"
+        default: "3600"
 
       # --- Runtime / versions ---
       runs-on:
@@ -83,8 +73,8 @@ permissions:
   contents: read
 
 jobs:
-  Create-Vault-Issuer:
-    name: Create Vault-PKI ClusterIssuer Prerequisites
+  Create-Vault-K8s-Auth:
+    name: Create Vault Kubernetes Auth Backend
     runs-on: ${{ inputs.runs-on }}
     environment: ${{ inputs.environment-name }}
     steps:
@@ -95,7 +85,7 @@ jobs:
           token: ${{ secrets.GH_TOKEN }}
           ref: ${{ inputs.branch-name }}
 
-      - name: Run create-vault-issuer
+      - name: Run create-vault-k8s-auth
         uses: dagger/dagger-for-github@v8.4.1
         env:
           SOPS_AGE_KEY: ${{ secrets.SOPS_AGE_KEY }}
@@ -104,16 +94,14 @@ jobs:
           verb: call
           module: github.com/stuttgart-things/blueprints/argocd@${{ inputs.argocd-module-version }}
           args: >-
-            create-vault-issuer
+            create-vault-k8s-auth
             --cluster-name ${{ inputs.cluster-name }}
             --kubeconfig-source-file ${{ inputs.kubeconfig-source-file }}
             --vault-env-file ${{ inputs.vault-env-file }}
             --sops-key env:SOPS_AGE_KEY
-            --pki-role ${{ inputs.pki-role }}
-            --policy-name ${{ inputs.policy-name }}
-            --target-namespace ${{ inputs.target-namespace }}
-            --token-secret-name ${{ inputs.token-secret-name }}
-            --ca-secret-name ${{ inputs.ca-secret-name }}
+            --auth-name ${{ inputs.auth-name }}
+            --namespace ${{ inputs.namespace }}
+            --token-policies ${{ inputs.token-policies }}
             --token-ttl ${{ inputs.token-ttl }}
             --cache-buster ${{ github.run_id }}-${{ github.run_attempt }}
           cloud-token: ${{ secrets.DAGGER_CLOUD_TOKEN }}
