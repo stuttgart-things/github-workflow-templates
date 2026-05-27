@@ -67,7 +67,7 @@ on:
         description: "Version of stuttgart-things/blueprints/argocd"
         required: false
         type: string
-        default: v2.4.0
+        default: v2.4.1
 
 permissions:
   contents: read
@@ -94,7 +94,7 @@ jobs:
           verb: call
           module: github.com/stuttgart-things/blueprints/argocd@${{ inputs.argocd-module-version }}
           args: >-
-            create-vault-k8s-auth
+            create-vault-kubernetes-auth
             --cluster-name ${{ inputs.cluster-name }}
             --kubeconfig-source-file ${{ inputs.kubeconfig-source-file }}
             --vault-env-file ${{ inputs.vault-env-file }}
