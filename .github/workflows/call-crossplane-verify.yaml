@@ -1,0 +1,63 @@
+---
+name: Crossplane Configuration Verification with Dagger
+on:
+  workflow_call:
+    inputs:
+      runs-on:
+        required: false
+        type: string
+        default: ubuntu-latest
+      environment-name:
+        required: false
+        type: string
+        default: k8s
+      src:
+        description: >-
+          Path to a single Crossplane Configuration directory
+          (containing crossplane.yaml, apis/, examples/).
+        required: true
+        type: string
+      provider-kubernetes-version:
+        description: >-
+          provider-kubernetes version whose CRD schemas are used for Layer 2
+          (Object wrapper) validation. Should match the dependsOn floor in the
+          Configuration's crossplane.yaml.
+        required: false
+        type: string
+        default: v1.2.0
+      dagger-version:
+        description: "Dagger CLI version"
+        required: false
+        type: string
+        default: "0.20.8"
+      crossplane-module-version:
+        description: "Version of stuttgart-things/dagger/crossplane to invoke"
+        required: false
+        type: string
+        default: v0.115.0
+
+permissions:
+  contents: read
+
+jobs:
+  Crossplane-Verify:
+    name: Crossplane Verify (${{ inputs.src }})
+    runs-on: ${{ inputs.runs-on }}
+    environment: ${{ inputs.environment-name }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6.0.2
+        with:
+          fetch-depth: 0
+
+      - name: Verify Configuration
+        uses: dagger/dagger-for-github@v8.4.1
+        with:
+          version: ${{ inputs.dagger-version }}
+          verb: call
+          module: github.com/stuttgart-things/dagger/crossplane@${{ inputs.crossplane-module-version }}
+          args: >-
+            verify
+            --src ${{ inputs.src }}
+            --provider-kubernetes-version ${{ inputs.provider-kubernetes-version }}
+          cloud-token: ${{ secrets.DAGGER_CLOUD_TOKEN }}
