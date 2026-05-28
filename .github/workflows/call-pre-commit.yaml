@@ -1,0 +1,145 @@
+---
+name: Pre-commit Hooks with Dagger
+on:
+  workflow_call:
+    inputs:
+      runs-on:
+        required: false
+        type: string
+        default: ubuntu-latest
+      environment-name:
+        required: false
+        type: string
+        default: linting
+      src:
+        description: "Path to the repo root (relative to the checkout)"
+        required: false
+        type: string
+        default: "."
+      config-path:
+        description: "Path to .pre-commit-config.yaml (relative to src)"
+        required: false
+        type: string
+        default: ".pre-commit-config.yaml"
+      skip-hooks:
+        description: >-
+          Comma-separated list of hook IDs to skip
+          (forwarded to the SKIP env var pre-commit reads).
+        required: false
+        type: string
+        default: ""
+      output-file:
+        description: "Path on the runner where the findings file is exported."
+        required: false
+        type: string
+        default: "/tmp/pre-commit-findings.txt"
+      continue-on-error:
+        description: >-
+          When true, hook failures don't fail the job — useful for advisory runs.
+        required: false
+        type: boolean
+        default: false
+      dagger-version:
+        description: "Dagger CLI version"
+        required: false
+        type: string
+        default: "0.20.8"
+      linting-module-version:
+        description: "Version of stuttgart-things/dagger/linting to invoke"
+        required: false
+        type: string
+        default: v0.115.0
+      artifact-retention-days:
+        required: false
+        type: number
+        default: 30
+
+permissions:
+  contents: read
+
+jobs:
+  pre-commit:
+    name: Pre-commit Hooks
+    runs-on: ${{ inputs.runs-on }}
+    environment: ${{ inputs.environment-name }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6.0.2
+        with:
+          fetch-depth: 0
+
+      - name: Build skip-hooks arg
+        id: skip
+        run: |
+          set -eu
+          raw='${{ inputs.skip-hooks }}'
+          if [ -n "$raw" ]; then
+            echo "arg=--skip-hooks $raw" >> "$GITHUB_OUTPUT"
+          else
+            echo "arg=" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Run pre-commit
+        uses: dagger/dagger-for-github@v8.4.1
+        with:
+          version: ${{ inputs.dagger-version }}
+          verb: call
+          module: github.com/stuttgart-things/dagger/linting@${{ inputs.linting-module-version }}
+          args: >-
+            run-pre-commit
+            --src ${{ inputs.src }}
+            --config-path ${{ inputs.config-path }}
+            ${{ steps.skip.outputs.arg }}
+            export --path ${{ inputs.output-file }}
+          cloud-token: ${{ secrets.DAGGER_CLOUD_TOKEN }}
+
+      - name: Display findings
+        if: always()
+        id: findings
+        run: |
+          set -eu
+          OUT='${{ inputs.output-file }}'
+          if [ ! -f "$OUT" ]; then
+            echo "::error::pre-commit findings file not found at $OUT"
+            echo "failed=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "==> pre-commit output"
+          cat "$OUT"
+          # The dagger function masks the real exit code with `|| true`, so the
+          # text is authoritative. pre-commit prints `<hook>...Failed` per failure.
+          if grep -qE '\.\.\.+Failed$' "$OUT"; then
+            echo "failed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "failed=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Upload findings
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: pre-commit-findings
+          path: ${{ inputs.output-file }}
+          if-no-files-found: ignore
+          retention-days: ${{ inputs.artifact-retention-days }}
+
+      - name: Add to job summary
+        if: always()
+        run: |
+          {
+            echo '## Pre-commit Hooks'
+            echo
+            if [ -f '${{ inputs.output-file }}' ]; then
+              echo '```'
+              cat '${{ inputs.output-file }}'
+              echo '```'
+            else
+              echo '_no findings file produced_'
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Fail on hook failure
+        if: always() && steps.findings.outputs.failed == 'true' && inputs.continue-on-error != true
+        run: |
+          echo "::error::one or more pre-commit hooks failed"
+          exit 1
