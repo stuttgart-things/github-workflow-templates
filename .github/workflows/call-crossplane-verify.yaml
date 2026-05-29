@@ -34,7 +34,11 @@ on:
         description: "Version of stuttgart-things/dagger/crossplane to invoke"
         required: false
         type: string
-        default: v0.115.0
+        # v0.115.2: verify Layer 3 skips embedded CRDs without a built-in
+        # schema (-ignore-missing-schemas), and render is fed examples/
+        # EnvironmentConfigs via --extra-resources so XRs that set
+        # spec.environmentConfig resolve offline.
+        default: v0.115.2
 
 permissions:
   contents: read
