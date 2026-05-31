@@ -48,7 +48,7 @@ jobs:
       artifact-ref: ${{ steps.ref.outputs.artifact-ref }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v6.0.2
 
       - name: Push kustomize base
         uses: dagger/dagger-for-github@v8.4.1

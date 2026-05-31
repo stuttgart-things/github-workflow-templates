@@ -47,7 +47,7 @@ jobs:
     steps:
       - name: Download image ref artifact
         if: ${{ inputs.image-ref-artifact != '' }}
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@v8.0.1
         with:
           name: ${{ inputs.image-ref-artifact }}
 
@@ -80,7 +80,7 @@ jobs:
 
       - name: Upload report
         if: always()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@v7.0.1
         with:
           name: ${{ inputs.artifact-name }}
           path: trivy-image-report.txt
