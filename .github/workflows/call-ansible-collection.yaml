@@ -36,13 +36,13 @@ jobs:
     environment: ${{ inputs.environment-name }}
     steps:
       - name: Checkout Project
-        uses: actions/checkout@v6.0.2
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           fetch-depth: '0'
           ref: ${{ inputs.branch-name }}
 
       - name: Build Collection
-        uses: dagger/dagger-for-github@v8.4.1
+        uses: dagger/dagger-for-github@27b130bf0f79a7f6fbbbe0fbca6760dc9bb40a77 # v8.4.1
         with:
           version: ${{ inputs.dagger-version }}
           verb: call
@@ -65,7 +65,7 @@ jobs:
 
       - name: Upload collection
         id: upload
-        uses: actions/upload-artifact@v7.0.1
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: ${{ env.COLLECTION_PACKAGE_NAME }}
           path: ${{ env.COLLECTION_PACKAGE_PATH }}
@@ -85,7 +85,7 @@ jobs:
 
   Release-Collection:
     needs: collection-build
-    uses: stuttgart-things/github-workflow-templates/.github/workflows/call-release-artifact.yaml@main
+    uses: stuttgart-things/github-workflow-templates/.github/workflows/call-release-artifact.yaml@bb83ff4e6dea2373835dcd6ec27aa3fcd3b592e7 # main
     with:
       runs-on: ${{ inputs.runs-on }}
       environment-name: k8s

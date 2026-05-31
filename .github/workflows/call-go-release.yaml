@@ -55,7 +55,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v6.0.2
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           fetch-depth: 0
 
@@ -68,7 +68,7 @@ jobs:
           echo "Current latest tag: $BEFORE"
 
       - name: Semantic release
-        uses: dagger/dagger-for-github@v8.4.1
+        uses: dagger/dagger-for-github@27b130bf0f79a7f6fbbbe0fbca6760dc9bb40a77 # v8.4.1
         with:
           module: ${{ inputs.dagger-release-module }}
           call: >-
@@ -101,13 +101,13 @@ jobs:
 
       - name: Set up Go
         if: steps.version-after.outputs.new_release == 'true'
-        uses: actions/setup-go@v6
+        uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6
         with:
           go-version: ${{ inputs.go-version }}
 
       - name: Run GoReleaser
         if: steps.version-after.outputs.new_release == 'true'
-        uses: goreleaser/goreleaser-action@v7
+        uses: goreleaser/goreleaser-action@5daf1e915a5f0af01ddbcd89a43b8061ff4f1a89 # v7
         with:
           distribution: goreleaser
           version: ${{ inputs.goreleaser-version }}
@@ -117,7 +117,7 @@ jobs:
 
       - name: Set up Ko
         if: steps.version-after.outputs.new_release == 'true' && inputs.stage-image
-        uses: ko-build/setup-ko@v0.9
+        uses: ko-build/setup-ko@d006021bd0c28d1ce33a07e7943d48b079944c8d # v0.9
 
       - name: Login to GHCR
         if: steps.version-after.outputs.new_release == 'true' && inputs.stage-image
@@ -137,7 +137,7 @@ jobs:
 
       - name: Push kustomize base
         if: steps.version-after.outputs.new_release == 'true' && inputs.push-kustomize
-        uses: dagger/dagger-for-github@v8.4.1
+        uses: dagger/dagger-for-github@27b130bf0f79a7f6fbbbe0fbca6760dc9bb40a77 # v8.4.1
         with:
           module: ${{ inputs.dagger-kcl-module }}
           call: >-
