@@ -51,7 +51,7 @@ jobs:
       dir_exists: ${{ steps.check-directory.outputs.DIR_EXISTS }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6.0.2
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           fetch-depth: '0'
           ref: ${{ inputs.branch }}
@@ -88,7 +88,7 @@ jobs:
       FILE_SECRETS_FILE: ${{ inputs.folder }}/file-secrets.yaml
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6.0.2
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           fetch-depth: '0'
           ref: ${{ inputs.branch }}
@@ -149,7 +149,7 @@ jobs:
 
       - name: Send Message To Homerun
         if: always() && ${{ inputs.send-to-homerun }}
-        uses: stuttgart-things/github-workflow-templates/actions/send-homerun-message@main
+        uses: stuttgart-things/github-workflow-templates/actions/send-homerun-message@bb83ff4e6dea2373835dcd6ec27aa3fcd3b592e7 # main
         with:
           url: "https://homerun.homerun-dev.sthings-vsphere.labul.sva.de/generic"
           secretToken: "${{ secrets.HOMERUN_TOKEN }}"

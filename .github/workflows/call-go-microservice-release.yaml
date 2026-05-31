@@ -63,7 +63,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v6.0.2
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           fetch-depth: 0
 
@@ -75,7 +75,7 @@ jobs:
           echo "Current latest tag: $BEFORE"
 
       - name: Semantic release
-        uses: dagger/dagger-for-github@v8.4.1
+        uses: dagger/dagger-for-github@27b130bf0f79a7f6fbbbe0fbca6760dc9bb40a77 # v8.4.1
         with:
           module: ${{ inputs.dagger-release-module }}
           call: >-
@@ -123,7 +123,7 @@ jobs:
 
       - name: GoReleaser
         if: steps.version-after.outputs.new_release == 'true'
-        uses: dagger/dagger-for-github@v8.4.1
+        uses: dagger/dagger-for-github@27b130bf0f79a7f6fbbbe0fbca6760dc9bb40a77 # v8.4.1
         with:
           module: ${{ inputs.dagger-go-module }}
           call: >-
@@ -139,7 +139,7 @@ jobs:
 
       - name: Stage image
         if: steps.version-after.outputs.new_release == 'true'
-        uses: dagger/dagger-for-github@v8.4.1
+        uses: dagger/dagger-for-github@27b130bf0f79a7f6fbbbe0fbca6760dc9bb40a77 # v8.4.1
         with:
           module: ${{ inputs.dagger-crane-module }}
           call: >-
@@ -155,7 +155,7 @@ jobs:
 
       - name: Push kustomize base
         if: steps.version-after.outputs.new_release == 'true'
-        uses: dagger/dagger-for-github@v8.4.1
+        uses: dagger/dagger-for-github@27b130bf0f79a7f6fbbbe0fbca6760dc9bb40a77 # v8.4.1
         with:
           module: ${{ inputs.dagger-kcl-module }}
           call: >-

@@ -213,7 +213,7 @@ jobs:
     environment: ${{ inputs.environment-name }}
     steps:
       - name: Checkout source repo
-        uses: actions/checkout@v6.0.2
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           repository: ${{ inputs.source-repo }}
           token: ${{ secrets.GH_TOKEN }}
@@ -222,7 +222,7 @@ jobs:
 
       - name: Decrypt kubeconfig (for deploy / detect-network-key)
         if: ${{ (inputs.deploy || inputs.detect-network-key) && inputs.kubeconfig-source-file != '' }}
-        uses: dagger/dagger-for-github@v8.4.1
+        uses: dagger/dagger-for-github@27b130bf0f79a7f6fbbbe0fbca6760dc9bb40a77 # v8.4.1
         env:
           SOPS_AGE_KEY: ${{ secrets.SOPS_AGE_KEY }}
         with:
@@ -329,7 +329,7 @@ jobs:
 
       - name: Upload rendered config
         if: ${{ inputs.artifact-name != '' }}
-        uses: actions/upload-artifact@v7.0.1
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: ${{ inputs.artifact-name }}
           path: ${{ inputs.output-path }}

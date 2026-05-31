@@ -63,7 +63,7 @@ jobs:
     environment: ${{ inputs.environment-name }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v6.0.2
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           fetch-depth: 0
 
@@ -85,7 +85,7 @@ jobs:
           fi
 
       - name: Helm Lint
-        uses: dagger/dagger-for-github@v8.4.1
+        uses: dagger/dagger-for-github@27b130bf0f79a7f6fbbbe0fbca6760dc9bb40a77 # v8.4.1
         with:
           version: ${{ inputs.dagger-version }}
           verb: call
@@ -96,7 +96,7 @@ jobs:
           cloud-token: ${{ secrets.DAGGER_CLOUD_TOKEN }}
 
       - name: Helm Kubeconform
-        uses: dagger/dagger-for-github@v8.4.1
+        uses: dagger/dagger-for-github@27b130bf0f79a7f6fbbbe0fbca6760dc9bb40a77 # v8.4.1
         with:
           version: ${{ inputs.dagger-version }}
           verb: call
@@ -110,7 +110,7 @@ jobs:
 
       - name: Helm Conftest
         if: inputs.policy-dir != ''
-        uses: dagger/dagger-for-github@v8.4.1
+        uses: dagger/dagger-for-github@27b130bf0f79a7f6fbbbe0fbca6760dc9bb40a77 # v8.4.1
         with:
           version: ${{ inputs.dagger-version }}
           verb: call
@@ -125,7 +125,7 @@ jobs:
       - name: Helm Validate (Polaris, advisory)
         if: inputs.run-polaris
         continue-on-error: true
-        uses: dagger/dagger-for-github@v8.4.1
+        uses: dagger/dagger-for-github@27b130bf0f79a7f6fbbbe0fbca6760dc9bb40a77 # v8.4.1
         with:
           version: ${{ inputs.dagger-version }}
           verb: call
@@ -140,7 +140,7 @@ jobs:
 
       - name: Upload Polaris report
         if: inputs.run-polaris && always()
-        uses: actions/upload-artifact@v7.0.1
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: polaris-${{ inputs.chart-path }}
           path: /tmp/polaris.json

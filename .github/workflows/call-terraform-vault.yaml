@@ -117,7 +117,7 @@ jobs:
     environment: ${{ inputs.environment-name }}
     steps:
       - name: Checkout source repo
-        uses: actions/checkout@v6.0.2
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           repository: ${{ inputs.source-repo }}
           token: ${{ secrets.GH_TOKEN }}
@@ -125,13 +125,13 @@ jobs:
           ref: ${{ inputs.branch-name }}
 
       - name: Install Terraform
-        uses: hashicorp/setup-terraform@v4
+        uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4
         with:
           terraform_version: ${{ inputs.terraform-version }}
           terraform_wrapper: false
 
       - name: Setup Dagger CLI
-        uses: dagger/dagger-for-github@v8.4.1
+        uses: dagger/dagger-for-github@27b130bf0f79a7f6fbbbe0fbca6760dc9bb40a77 # v8.4.1
         with:
           version: ${{ inputs.dagger-version }}
           cloud-token: ${{ secrets.DAGGER_CLOUD_TOKEN }}
@@ -227,7 +227,7 @@ jobs:
     environment: ${{ inputs.environment-name }}
     steps:
       - name: Checkout source repo
-        uses: actions/checkout@v6.0.2
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           repository: ${{ inputs.source-repo }}
           token: ${{ secrets.GH_TOKEN }}
@@ -235,7 +235,7 @@ jobs:
           ref: ${{ inputs.branch-name }}
 
       - name: Render + SOPS-encrypt tfvars JSON into terraform dir
-        uses: dagger/dagger-for-github@v8.4.1
+        uses: dagger/dagger-for-github@27b130bf0f79a7f6fbbbe0fbca6760dc9bb40a77 # v8.4.1
         env:
           SOPS_AGE_KEY: ${{ secrets.SOPS_AGE_KEY }}
           AGE_PUB: ${{ secrets.AGE_PUB }}
@@ -268,7 +268,7 @@ jobs:
           EOF
 
       - name: Terraform ${{ inputs.operation }} via Dagger TerraformApply
-        uses: dagger/dagger-for-github@v8.4.1
+        uses: dagger/dagger-for-github@27b130bf0f79a7f6fbbbe0fbca6760dc9bb40a77 # v8.4.1
         env:
           SOPS_AGE_KEY: ${{ secrets.SOPS_AGE_KEY }}
         with:
