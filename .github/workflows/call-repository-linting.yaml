@@ -70,7 +70,7 @@ jobs:
     environment: ${{ inputs.environment-name }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v6.0.2
         with:
           fetch-depth: 0
           ref: ${{ inputs.branch-name }}
@@ -112,7 +112,7 @@ jobs:
 
       - name: Upload linting results
         if: always()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@v7.0.1
         with:
           name: linting-results
           path: ${{ inputs.output-file }}

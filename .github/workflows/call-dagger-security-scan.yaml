@@ -39,7 +39,7 @@ jobs:
     continue-on-error: ${{ inputs.continue-on-error }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v6.0.2
 
       - name: Run gosec
         uses: dagger/dagger-for-github@v8.4.1
@@ -54,7 +54,7 @@ jobs:
 
       - name: Upload report
         if: always()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@v7.0.1
         with:
           name: ${{ inputs.artifact-name }}
           path: security-report.txt
