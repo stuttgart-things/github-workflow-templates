@@ -40,6 +40,15 @@ on:
       kustomize-oci-repo:
         default: ""
         type: string
+      kustomize-image-key:
+        default: ""
+        type: string
+        description: >-
+          KCL option key for the container image (e.g. config.image). When set
+          and push-kustomize is enabled, the pushed kustomize base pins this key
+          to the released image ghcr.io/<repo>:<version>, overriding whatever the
+          profile file specifies (e.g. :latest). Leave empty to keep the
+          profile's value.
       dry-run-only:
         default: false
         type: boolean
@@ -151,6 +160,7 @@ jobs:
             push-kustomize-base
             --source ./${{ inputs.kcl-source-dir }}
             --parameters-file ./${{ inputs.kcl-profile-file }}
+            ${{ inputs.kustomize-image-key != '' && format('--parameters {0}=ghcr.io/{1}:{2}', inputs.kustomize-image-key, github.repository, steps.version-after.outputs.version) || '' }}
             --address ${{ inputs.kustomize-oci-repo }}
             --tag ${{ steps.version-after.outputs.version }}
             --user env:GITHUB_USER
