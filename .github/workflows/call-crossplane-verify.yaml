@@ -34,11 +34,16 @@ on:
         description: "Version of stuttgart-things/dagger/crossplane to invoke"
         required: false
         type: string
-        # v0.115.2: verify Layer 3 skips embedded CRDs without a built-in
-        # schema (-ignore-missing-schemas), and render is fed examples/
-        # EnvironmentConfigs via --extra-resources so XRs that set
-        # spec.environmentConfig resolve offline.
-        default: v0.115.2
+        # v0.118.0: pins the crank CLI to v2.2.2 and tolerates the crossplane
+        # release bucket's currently-mismatched crank.sha256. Earlier versions
+        # tracked the `stable` channel's floating `current` marker, so when it
+        # advanced to crank v2.3.0 (which runs `crossplane internal render` in
+        # Docker, incompatible with the function images) render broke for every
+        # function-based Configuration with no code change. See
+        # stuttgart-things/dagger#295. Carries forward the v0.115.2 behaviour
+        # (Layer 3 -ignore-missing-schemas; EnvironmentConfigs via
+        # --extra-resources for offline render).
+        default: v0.118.0
 
 permissions:
   contents: read
