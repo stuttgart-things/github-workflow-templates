@@ -20,6 +20,13 @@ on:
         default: linux/amd64,linux/arm64
         type: string
         description: Target platforms for container image build
+      build-path:
+        default: "."
+        type: string
+        description: >-
+          Import path / directory of the package main built by ko. Defaults to
+          the repo root; set to e.g. ./cmd/server when the entrypoint is not at
+          the root.
       push-kustomize:
         default: false
         type: boolean
@@ -128,7 +135,7 @@ jobs:
         run: |
           export BUILD_DATE="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
           VERSION="${{ steps.version-after.outputs.version }}"
-          ko build --bare --tags="${VERSION}" . \
+          ko build --bare --tags="${VERSION}" ${{ inputs.build-path }} \
             --platform=${{ inputs.image-platforms }}
         env:
           KO_DOCKER_REPO: ghcr.io/${{ github.repository }}
