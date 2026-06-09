@@ -43,7 +43,10 @@ on:
         # stuttgart-things/dagger#295. Carries forward the v0.115.2 behaviour
         # (Layer 3 -ignore-missing-schemas; EnvironmentConfigs via
         # --extra-resources for offline render).
-        default: v0.118.0
+        # v0.118.1: runs render Functions as Dagger services instead of nested
+        # Docker containers, fixing the function-kcl render-sandbox failure
+        # (DeadlineExceeded / connection refused) — stuttgart-things/dagger#300.
+        default: v0.118.1
 
 permissions:
   contents: read
