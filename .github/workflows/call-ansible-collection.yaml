@@ -85,7 +85,7 @@ jobs:
 
   Release-Collection:
     needs: collection-build
-    uses: stuttgart-things/github-workflow-templates/.github/workflows/call-release-artifact.yaml@bb83ff4e6dea2373835dcd6ec27aa3fcd3b592e7 # main
+    uses: stuttgart-things/github-workflow-templates/.github/workflows/call-release-artifact.yaml@ac728484cefce72ff49281ccdea321d1dbe9f766 # main
     with:
       runs-on: ${{ inputs.runs-on }}
       environment-name: k8s
