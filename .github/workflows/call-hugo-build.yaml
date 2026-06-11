@@ -136,7 +136,7 @@ jobs:
         uses: actions/deploy-pages@cd2ce8fcbc39b97be8ca5fce6e763baed58fa128 # v5.0.0 # or the latest "vX.X.X" version tag for this action
 
       - name: Microsoft Teams Notification
-        uses: skitionek/notify-microsoft-teams@40873aa494cbb4fd3fea7773973df17d1358e48d # master
+        uses: skitionek/notify-microsoft-teams@9147918b5570c67bc8c3f7a1ba1071a1703ed223 # master
         if: always()
         with:
           webhook_url: ${{ secrets.MS_TEAMS_URL }}
