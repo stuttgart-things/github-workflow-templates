@@ -135,6 +135,31 @@ jobs:
 
 </details>
 
+<details><summary>KCL VALIDATE</summary>
+
+```yaml
+jobs:
+  kcl-validate:
+    name: KCL Validate
+    strategy:
+      matrix:
+        module-dir: [kcl/ansible, kcl/ansible-run, kcl/buildah]
+    uses: stuttgart-things/github-workflow-templates/.github/workflows/call-kcl-validate.yaml@main
+    with:
+      module-dir: ${{ matrix.module-dir }}
+    secrets: inherit
+```
+
+Validates one KCL module directory per call via the `stuttgart-things/dagger/kcl`
+module: a formatting check (`kcl fmt` + `git diff --exit-code`, since `kcl fmt`
+has no native `--check` flag) and a compile/render check (`validate-kcl`).
+Optionally renders the entrypoint with caller-supplied `flat-parameters`
+(`-D` key=value) and/or `composition-parameters`
+(`params={oxr:{spec:{...}}}`) — parameter values must not contain spaces. Use a
+matrix in the caller to cover multiple modules.
+
+</details>
+
 ## ACTIONS
 
 <details><summary>SEND MESSAGE TO HOMERUN</summary>
