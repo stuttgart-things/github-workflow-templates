@@ -17,11 +17,11 @@ on:
       dagger-version:
         required: false
         type: string
-        default: 0.18.10
+        default: v0.21.7
       dagger-module-version:
         required: false
         type: string
-        default: v0.13.0
+        default: v0.120.0
       environment-name:
         required: false
         type: string
