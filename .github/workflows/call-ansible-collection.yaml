@@ -21,7 +21,7 @@ on:
       dagger-module-version:
         required: false
         type: string
-        default: v0.120.0
+        default: v0.121.0
       environment-name:
         required: false
         type: string
@@ -49,12 +49,33 @@ jobs:
           fetch-depth: '0'
           ref: ${{ inputs.branch-name }}
 
+      - name: Determine Collection Version
+        id: version
+        run: |
+          set -eu
+
+          # THE COMMIT COUNT IS THE ORDERING SIGNAL. A SHALLOW CLONE RETURNS A
+          # SMALL COUNT AND WOULD SILENTLY PUBLISH A LOWER VERSION THAN THE
+          # LAST RELEASE, SO REFUSE TO GUESS
+          if [ "$(git rev-parse --is-shallow-repository)" != "false" ]; then
+            echo "repository is shallow - checkout needs fetch-depth: 0"
+            exit 1
+          fi
+
+          # YY.MMDD.<COMMIT COUNT>: MONOTONIC ACROSS DAY, MONTH AND YEAR
+          # BOUNDARIES, AND THE PATCH TIES A RELEASE TO AN EXACT COMMIT
+          VERSION="$(date -u +%y).$(date -u +%-m%d).$(git rev-list --count HEAD)"
+
+          echo "COLLECTION VERSION: ${VERSION}"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+        shell: bash
+
       - name: Build Collection
         uses: dagger/dagger-for-github@27b130bf0f79a7f6fbbbe0fbca6760dc9bb40a77 # v8.4.1
         with:
           version: ${{ inputs.dagger-version }}
           verb: call
-          args: run-collection-build-pipeline --src ${{ inputs.collection-directory }} --progress plain export --path=/tmp/${{ inputs.collection-directory }}
+          args: run-collection-build-pipeline --src ${{ inputs.collection-directory }} --version ${{ steps.version.outputs.version }} --progress plain export --path=/tmp/${{ inputs.collection-directory }}
           module: github.com/stuttgart-things/dagger/ansible@${{ inputs.dagger-module-version }}
 
       - name: Check collection artifact
