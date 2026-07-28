@@ -50,6 +50,36 @@ jobs:
           du -sh /tmp/${{ inputs.artifact-name }}
         shell: bash
 
+      - name: Refuse To Republish An Existing Tag
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          RELEASE_TAG: ${{ inputs.tag || inputs.artifact-name }}
+        run: |
+          set -eu
+
+          # A VERSION IS DERIVED FROM THE COMMIT, SO AN EXISTING TAG MEANS THIS
+          # EXACT SOURCE WAS ALREADY RELEASED. FAIL HERE WITH SOMETHING READABLE
+          # RATHER THAN LETTING THE RELEASE STEP COLLIDE
+          HTTP_CODE=$(curl -sS -o /dev/null -w '%{http_code}' \
+            -H "Authorization: token ${GH_TOKEN}" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/git/ref/tags/${RELEASE_TAG}")
+
+          case "${HTTP_CODE}" in
+            404)
+              echo "tag ${RELEASE_TAG} is free"
+              ;;
+            200)
+              echo "tag ${RELEASE_TAG} already exists"
+              echo "this commit was already released - commit a change to release again"
+              exit 1
+              ;;
+            *)
+              echo "could not check tag ${RELEASE_TAG}: HTTP ${HTTP_CODE}"
+              exit 1
+              ;;
+          esac
+        shell: bash
+
       - name: Release Collection
         uses: dagger/dagger-for-github@27b130bf0f79a7f6fbbbe0fbca6760dc9bb40a77 # v8.4.1
         with:
