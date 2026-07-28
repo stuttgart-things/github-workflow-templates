@@ -10,6 +10,13 @@ on:
       artifact-name:
         required: true
         type: string
+      tag:
+        description: >-
+          Release tag. Defaults to artifact-name, which embeds the file
+          extension - pass this to tag a version rather than a filename.
+        required: false
+        type: string
+        default: ''
       environment-name:
         required: false
         type: string
@@ -48,5 +55,5 @@ jobs:
         with:
           version: ${{ inputs.dagger-version }}
           verb: call
-          args: github-release --token=env:GH_TOKEN --group ${GITHUB_REPOSITORY%%/*} --repo ${GITHUB_REPOSITORY#*/} --notes "${{ inputs.artifact-name }}" --tag ${{ inputs.artifact-name }} --title "release for ${{ inputs.artifact-name }}" --files "/tmp/${{ inputs.artifact-name }}" --progress plain
+          args: github-release --token=env:GH_TOKEN --group ${GITHUB_REPOSITORY%%/*} --repo ${GITHUB_REPOSITORY#*/} --notes "${{ inputs.artifact-name }}" --tag ${{ inputs.tag || inputs.artifact-name }} --title "${{ inputs.tag || inputs.artifact-name }}" --files "/tmp/${{ inputs.artifact-name }}" --progress plain
           module: github.com/stuttgart-things/dagger/ansible@${{ inputs.dagger-module-version }}
