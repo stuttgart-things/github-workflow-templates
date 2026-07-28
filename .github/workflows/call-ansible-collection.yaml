@@ -38,6 +38,7 @@ jobs:
   collection-build:
     outputs:
       collection-name: ${{ steps.meta.outputs.COLLECTION_PACKAGE_NAME }}
+      collection-tag: ${{ steps.meta.outputs.COLLECTION_TAG }}
     name: Collection Build
     runs-on: ${{ inputs.runs-on }}
     environment: ${{ inputs.environment-name }}
@@ -62,12 +63,18 @@ jobs:
           COLLECTION_PACKAGE_PATH=$(ls --time=birth /tmp/${{ inputs.collection-directory }}/*.tar.gz | head -n 1)
           COLLECTION_PACKAGE_NAME=$(basename "${COLLECTION_PACKAGE_PATH}")
 
+          # THE TAG NAMES A VERSION, NOT A FILE - THE EXTENSION BELONGS TO THE
+          # RELEASE ASSET ONLY
+          COLLECTION_TAG=$(basename "${COLLECTION_PACKAGE_PATH}" .tar.gz)
+
           echo ${COLLECTION_PACKAGE_NAME}
           echo ${COLLECTION_PACKAGE_PATH}
+          echo ${COLLECTION_TAG}
 
           echo "COLLECTION_PACKAGE_NAME=$(echo ${COLLECTION_PACKAGE_NAME})" >> $GITHUB_ENV
           echo "COLLECTION_PACKAGE_NAME=$(echo ${COLLECTION_PACKAGE_NAME})" >> $GITHUB_OUTPUT
           echo "COLLECTION_PACKAGE_PATH=$(echo ${COLLECTION_PACKAGE_PATH})" >> $GITHUB_ENV
+          echo "COLLECTION_TAG=$(echo ${COLLECTION_TAG})" >> $GITHUB_OUTPUT
         shell: bash
 
       - name: Upload collection
@@ -99,5 +106,6 @@ jobs:
       environment-name: k8s
       dagger-module-version: ${{ inputs.dagger-module-version }}
       artifact-name: ${{ needs.collection-build.outputs.collection-name }}
+      tag: ${{ needs.collection-build.outputs.collection-tag }}
       dagger-version: ${{ inputs.dagger-version }}
     secrets: inherit # pragma: allowlist secret
