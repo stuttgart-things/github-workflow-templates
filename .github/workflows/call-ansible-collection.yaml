@@ -26,6 +26,13 @@ on:
         required: false
         type: string
         default: k8s
+      publish-release:
+        description: >-
+          Publish the built collection as a github release. Set false on
+          pull_request builds so only merges to the default branch release.
+        required: false
+        type: boolean
+        default: true
 
 jobs:
   collection-build:
@@ -85,6 +92,7 @@ jobs:
 
   Release-Collection:
     needs: collection-build
+    if: ${{ inputs.publish-release }}
     uses: stuttgart-things/github-workflow-templates/.github/workflows/call-release-artifact.yaml@bb83ff4e6dea2373835dcd6ec27aa3fcd3b592e7 # main
     with:
       runs-on: ${{ inputs.runs-on }}
