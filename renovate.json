@@ -3,5 +3,36 @@
   "extends": [
     "config:recommended",
     "helpers:pinGitHubActionDigests"
+  ],
+  "customManagers": [
+    {
+      "customType": "regex",
+      "description": "STUTTGART-THINGS DAGGER ANSIBLE MODULE PIN. LIVES IN SIX PLACES ACROSS TWO REPOS AND WAS ALIGNED BY HAND THREE TIMES",
+      "fileMatch": [
+        "^\\.github/workflows/[^/]+\\.ya?ml$"
+      ],
+      "matchStrings": [
+        "DAGGER_ANSIBLE_MODULE_VERSION:[ \\t]*(?<currentValue>v\\d+\\.\\d+\\.\\d+)",
+        "dagger-module-version:[ \\t]*(?<currentValue>v\\d+\\.\\d+\\.\\d+)",
+        "dagger-module-version:\\n(?:[ \\t]+[^\\n]*\\n)*?[ \\t]+default:[ \\t]*['\"]?(?<currentValue>v?\\d+\\.\\d+\\.\\d+)['\"]?"
+      ],
+      "depNameTemplate": "stuttgart-things/dagger",
+      "datasourceTemplate": "github-releases",
+      "versioningTemplate": "semver"
+    },
+    {
+      "customType": "regex",
+      "description": "DAGGER CLI PIN, PASSED TO dagger/dagger-for-github",
+      "fileMatch": [
+        "^\\.github/workflows/[^/]+\\.ya?ml$"
+      ],
+      "matchStrings": [
+        "dagger-version:[ \\t]*(?<currentValue>v\\d+\\.\\d+\\.\\d+)",
+        "dagger-version:\\n(?:[ \\t]+[^\\n]*\\n)*?[ \\t]+default:[ \\t]*['\"]?(?<currentValue>v?\\d+\\.\\d+\\.\\d+)['\"]?"
+      ],
+      "depNameTemplate": "dagger/dagger",
+      "datasourceTemplate": "github-releases",
+      "versioningTemplate": "semver"
+    }
   ]
 }
