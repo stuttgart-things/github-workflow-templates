@@ -35,6 +35,13 @@ jobs:
     name: Release artifact on github
     runs-on: ${{ inputs.runs-on }}
     environment: ${{ inputs.environment-name }}
+    # THE CALLER MUST GRANT THESE OR attest-build-provenance FAILS. id-token
+    # SIGNS THE ATTESTATION VIA OIDC, attestations WRITES IT TO THE CALLING
+    # REPOSITORY'S ATTESTATION STORE
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
     env:
       GH_TOKEN: ${{ secrets.GH_TOKEN }}
     steps:
@@ -49,6 +56,29 @@ jobs:
         run: |
           du -sh /tmp/${{ inputs.artifact-name }}
         shell: bash
+
+      # CONSUMERS ansible-galaxy install FROM A PLAIN HTTPS URL WITH NOTHING TO
+      # CHECK THE DOWNLOAD AGAINST. PUBLISH THE DIGEST AS A RELEASE ASSET SO
+      # THERE IS SOMETHING TO VERIFY AGAINST
+      - name: Generate Checksum
+        id: checksum
+        run: |
+          set -eu
+          cd /tmp
+          sha256sum "${{ inputs.artifact-name }}" > "${{ inputs.artifact-name }}.sha256"
+          cat "${{ inputs.artifact-name }}.sha256"
+
+          DIGEST=$(cut -d' ' -f1 < "${{ inputs.artifact-name }}.sha256")
+          echo "sha256=${DIGEST}" >> "$GITHUB_OUTPUT"
+        shell: bash
+
+      # BINDS THE ARTIFACT TO THE WORKFLOW, REPOSITORY AND COMMIT THAT PRODUCED
+      # IT. VERIFY WITH:
+      #   gh attestation verify <file> --repo <owner>/<repo>
+      - name: Attest Build Provenance
+        uses: actions/attest-build-provenance@0f67c3f4856b2e3261c31976d6725780e5e4c373 # v4.1.1
+        with:
+          subject-path: /tmp/${{ inputs.artifact-name }}
 
       - name: Refuse To Republish An Existing Tag
         env:
@@ -85,5 +115,5 @@ jobs:
         with:
           version: ${{ inputs.dagger-version }}
           verb: call
-          args: github-release --token=env:GH_TOKEN --group ${GITHUB_REPOSITORY%%/*} --repo ${GITHUB_REPOSITORY#*/} --notes "${{ inputs.artifact-name }}" --tag ${{ inputs.tag || inputs.artifact-name }} --title "${{ inputs.tag || inputs.artifact-name }}" --files "/tmp/${{ inputs.artifact-name }}" --progress plain
+          args: github-release --token=env:GH_TOKEN --group ${GITHUB_REPOSITORY%%/*} --repo ${GITHUB_REPOSITORY#*/} --notes "${{ inputs.artifact-name }} | sha256 ${{ steps.checksum.outputs.sha256 }} | commit ${{ github.sha }}" --tag ${{ inputs.tag || inputs.artifact-name }} --title "${{ inputs.tag || inputs.artifact-name }}" --files "/tmp/${{ inputs.artifact-name }}" --files "/tmp/${{ inputs.artifact-name }}.sha256" --progress plain
           module: github.com/stuttgart-things/dagger/ansible@${{ inputs.dagger-module-version }}
