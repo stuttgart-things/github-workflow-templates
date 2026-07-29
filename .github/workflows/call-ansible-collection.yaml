@@ -42,6 +42,10 @@ jobs:
     name: Collection Build
     runs-on: ${{ inputs.runs-on }}
     environment: ${{ inputs.environment-name }}
+    # THE BUILD READS SOURCE AND UPLOADS AN ARTIFACT. IT RELEASES NOTHING, SO
+    # IT NEEDS NO WRITE SCOPE ON THE CALLING REPOSITORY
+    permissions:
+      contents: read
     steps:
       - name: Checkout Project
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -121,6 +125,13 @@ jobs:
   Release-Collection:
     needs: collection-build
     if: ${{ inputs.publish-release }}
+    # PASSED DOWN TO call-release-artifact.yaml, WHICH SIGNS A BUILD PROVENANCE
+    # ATTESTATION. A REUSABLE WORKFLOW CANNOT GRANT ITSELF MORE THAN ITS CALLER
+    # DID, SO THE CALLING REPOSITORY MUST GRANT THESE TOO
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
     uses: stuttgart-things/github-workflow-templates/.github/workflows/call-release-artifact.yaml@bb83ff4e6dea2373835dcd6ec27aa3fcd3b592e7 # main
     with:
       runs-on: ${{ inputs.runs-on }}
