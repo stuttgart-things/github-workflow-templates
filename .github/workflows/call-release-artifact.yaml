@@ -74,7 +74,16 @@ jobs:
 
       # BINDS THE ARTIFACT TO THE WORKFLOW, REPOSITORY AND COMMIT THAT PRODUCED
       # IT. VERIFY WITH:
-      #   gh attestation verify <file> --repo <owner>/<repo>
+      #   gh attestation verify <file> \
+      #     --repo <owner>/<repo> \
+      #     --signer-repo stuttgart-things/github-workflow-templates
+      #
+      # --signer-repo IS NOT OPTIONAL. THE SIGNING IDENTITY IN THE CERTIFICATE
+      # IS THIS REUSABLE WORKFLOW, WHICH LIVES IN A DIFFERENT REPOSITORY FROM
+      # THE ARTIFACT. WITHOUT IT gh LOOKS FOR A SIGNER IN THE ARTIFACT'S OWN
+      # REPO, FINDS NONE, AND FAILS WITH A BARE
+      #   Error: verifying with issuer "sigstore.dev"
+      # WHICH READS LIKE A BAD ARTIFACT RATHER THAN A BAD COMMAND
       - name: Attest Build Provenance
         uses: actions/attest-build-provenance@0f67c3f4856b2e3261c31976d6725780e5e4c373 # v4.1.1
         with:
@@ -115,5 +124,5 @@ jobs:
         with:
           version: ${{ inputs.dagger-version }}
           verb: call
-          args: github-release --token=env:GH_TOKEN --group ${GITHUB_REPOSITORY%%/*} --repo ${GITHUB_REPOSITORY#*/} --notes "${{ inputs.artifact-name }} | sha256 ${{ steps.checksum.outputs.sha256 }} | commit ${{ github.sha }}" --tag ${{ inputs.tag || inputs.artifact-name }} --title "${{ inputs.tag || inputs.artifact-name }}" --files "/tmp/${{ inputs.artifact-name }}" --files "/tmp/${{ inputs.artifact-name }}.sha256" --progress plain
+          args: github-release --token=env:GH_TOKEN --group ${GITHUB_REPOSITORY%%/*} --repo ${GITHUB_REPOSITORY#*/} --notes "${{ inputs.artifact-name }} | sha256 ${{ steps.checksum.outputs.sha256 }} | commit ${{ github.sha }} | verify with -- gh attestation verify ${{ inputs.artifact-name }} --repo ${GITHUB_REPOSITORY} --signer-repo stuttgart-things/github-workflow-templates" --tag ${{ inputs.tag || inputs.artifact-name }} --title "${{ inputs.tag || inputs.artifact-name }}" --files "/tmp/${{ inputs.artifact-name }}" --files "/tmp/${{ inputs.artifact-name }}.sha256" --progress plain
           module: github.com/stuttgart-things/dagger/ansible@${{ inputs.dagger-module-version }}
