@@ -24,11 +24,11 @@ on:
       dagger-module-version:
         required: false
         type: string
-        default: v0.2.1
+        default: v0.121.0
       dagger-version:
         required: false
         type: string
-        default: "0.18.10"
+        default: v0.21.7
 
 jobs:
   release-artifact:
