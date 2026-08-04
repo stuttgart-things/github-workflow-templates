@@ -14,7 +14,7 @@ on:
 
 jobs:
   Lint-Repository:
-    uses: stuttgart-things/github-workflow-templates/.github/workflows/call-repository-linting.yaml@bb83ff4e6dea2373835dcd6ec27aa3fcd3b592e7 # main
+    uses: stuttgart-things/github-workflow-templates/.github/workflows/call-repository-linting.yaml@80a37e2b85ef8a3ed714d8e9c5f96625393c92ba # main
     with:
       runs-on: ubuntu-latest
       environment-name: linting

@@ -83,7 +83,7 @@ jobs:
 
       - name: Send Message To Homerun
         if: always()
-        uses: stuttgart-things/github-workflow-templates/actions/send-homerun-message@bb83ff4e6dea2373835dcd6ec27aa3fcd3b592e7 # main
+        uses: stuttgart-things/github-workflow-templates/actions/send-homerun-message@80a37e2b85ef8a3ed714d8e9c5f96625393c92ba # main
         with:
           url: "https://homerun.homerun-dev.sthings-vsphere.labul.sva.de/generic"
           secretToken: "${{ secrets.HOMERUN_TOKEN }}"
@@ -127,7 +127,7 @@ jobs:
 
       - name: Send Message To Homerun
         if: always()
-        uses: stuttgart-things/github-workflow-templates/actions/send-homerun-message@bb83ff4e6dea2373835dcd6ec27aa3fcd3b592e7 # main
+        uses: stuttgart-things/github-workflow-templates/actions/send-homerun-message@80a37e2b85ef8a3ed714d8e9c5f96625393c92ba # main
         with:
           url: "https://homerun.homerun-dev.sthings-vsphere.labul.sva.de/generic"
           secretToken: "${{ secrets.HOMERUN_TOKEN }}"
