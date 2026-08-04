@@ -45,7 +45,7 @@ on:
         description: "Dagger CLI version"
         required: false
         type: string
-        default: "0.20.6"
+        default: "0.21.8"
       blueprints-version:
         description: "Blueprints Dagger module version"
         required: false

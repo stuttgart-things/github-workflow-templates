@@ -28,7 +28,7 @@ on:
         description: "Dagger CLI version"
         required: false
         type: string
-        default: "0.20.1"
+        default: "0.21.8"
       sops-module-version:
         description: "SOPS Dagger module version"
         required: false

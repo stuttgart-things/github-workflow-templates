@@ -46,7 +46,7 @@ on:
         description: "Dagger CLI version"
         required: false
         type: string
-        default: "0.20.6"
+        default: "0.21.8"
       helm-module-version:
         description: "Version of stuttgart-things/dagger/helm to invoke"
         required: false
