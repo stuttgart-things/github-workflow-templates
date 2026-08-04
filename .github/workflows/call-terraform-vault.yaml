@@ -44,7 +44,7 @@ on:
       dagger-version:
         required: false
         type: string
-        default: "0.20.6"
+        default: "0.21.8"
       blueprints-version:
         required: false
         type: string
