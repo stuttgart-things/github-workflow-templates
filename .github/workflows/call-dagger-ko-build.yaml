@@ -30,7 +30,7 @@ on:
         default: "github.com/stuttgart-things/dagger/go@v0.103.0"
         type: string
       dagger-version:
-        default: "0.20.6"
+        default: "0.21.8"
         type: string
       image-ref-artifact:
         default: ""

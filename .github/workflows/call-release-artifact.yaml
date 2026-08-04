@@ -28,7 +28,7 @@ on:
       dagger-version:
         required: false
         type: string
-        default: v0.21.7
+        default: v0.21.8
 
 jobs:
   release-artifact:
