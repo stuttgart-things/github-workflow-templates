@@ -46,7 +46,16 @@ on:
         # v0.118.1: runs render Functions as Dagger services instead of nested
         # Docker containers, fixing the function-kcl render-sandbox failure
         # (DeadlineExceeded / connection refused) — stuttgart-things/dagger#300.
-        default: v0.118.1
+        # v0.122.0: adds Layer 4 — the RENDERED composite's status is validated
+        # against the status subtree of the Configuration's own XRD. Layer 1
+        # only ever checked what goes IN; nothing checked what the Composition
+        # writes back OUT, and a status field the module sets but the XRD does
+        # not declare is not pruned — it fails the whole status apply, and with
+        # it every compose, on the first live apply. Ready then stays True on
+        # the last good result while Synced goes False, so the XR looks healthy
+        # while it has silently stopped reconciling. Cost a live cluster before
+        # it was caught; see stuttgart-things/crossplane-configurations#283.
+        default: v0.122.0
 
 permissions:
   contents: read
