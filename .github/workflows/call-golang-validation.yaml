@@ -14,7 +14,7 @@ on:
         required: true
         type: string
       golang-version:
-        default: 1.24.0
+        default: 1.26.6
         required: true
         type: string
       timeout-minutes:
@@ -55,6 +55,10 @@ jobs:
       image: golang:${{ inputs.golang-version }}
     environment: ${{ inputs.environment-name }}
     continue-on-error: ${{ inputs.accept-failedtests }}
+    env:
+      # the golang image pins GOTOOLCHAIN=local; auto lets a consumer's
+      # go.mod pull a newer toolchain instead of failing the build
+      GOTOOLCHAIN: auto
     steps:
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -100,6 +104,10 @@ jobs:
       image: golang:${{ inputs.golang-version }}
     environment: ${{ inputs.environment-name }}
     continue-on-error: false
+    env:
+      # the golang image pins GOTOOLCHAIN=local; auto lets a consumer's
+      # go.mod pull a newer toolchain instead of failing the build
+      GOTOOLCHAIN: auto
     steps:
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
