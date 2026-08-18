@@ -7,7 +7,7 @@ on:
         default: ubuntu-latest
         type: string
       go-version:
-        default: "1.26.0"
+        default: "1.26.6"
         type: string
       platforms:
         default: linux/amd64,linux/arm64
@@ -111,6 +111,7 @@ jobs:
             --platform=${{ inputs.platforms }} \
             ${{ inputs.build-path }}
         env:
+          GOTOOLCHAIN: auto
           KO_DOCKER_REPO: ${{ steps.image-repo.outputs.repo }}
           VERSION: ${{ steps.build-meta.outputs.version }}
           BUILD_DATE: ${{ steps.build-meta.outputs.date }}
