@@ -20,6 +20,14 @@ on:
         default: linux/amd64,linux/arm64
         type: string
         description: Target platforms for container image build
+      image-extra-tags:
+        default: ""
+        type: string
+        description: >-
+          Additional tags to push alongside the version tag when stage-image is
+          enabled, comma-separated (e.g. "latest"). Empty pushes the version tag
+          only, which leaves a moving tag like :latest pointing at whatever it
+          last pointed at.
       build-path:
         default: "."
         type: string
@@ -145,7 +153,13 @@ jobs:
         run: |
           export BUILD_DATE="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
           VERSION="${{ steps.version-after.outputs.version }}"
-          ko build --bare --tags="${VERSION}" ${{ inputs.build-path }} \
+          TAGS="${VERSION}"
+          EXTRA="${{ inputs.image-extra-tags }}"
+          if [ -n "$EXTRA" ]; then
+            TAGS="${TAGS},${EXTRA}"
+          fi
+          echo "Pushing tags: ${TAGS}"
+          ko build --bare --tags="${TAGS}" ${{ inputs.build-path }} \
             --platform=${{ inputs.image-platforms }}
         env:
           GOTOOLCHAIN: auto
@@ -203,6 +217,9 @@ jobs:
           echo "| **Binaries** | Published via GoReleaser |" >> $GITHUB_STEP_SUMMARY
           if [ "${{ inputs.stage-image }}" = "true" ]; then
             echo "| **Image** | \`ghcr.io/${{ github.repository }}:$VERSION\` |" >> $GITHUB_STEP_SUMMARY
+            if [ -n "${{ inputs.image-extra-tags }}" ]; then
+              echo "| **Extra tags** | \`${{ inputs.image-extra-tags }}\` |" >> $GITHUB_STEP_SUMMARY
+            fi
           fi
           if [ "${{ inputs.push-kustomize }}" = "true" ]; then
             echo "| **Kustomize** | \`${{ inputs.kustomize-oci-repo }}:$VERSION\` |" >> $GITHUB_STEP_SUMMARY
