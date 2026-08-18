@@ -7,7 +7,7 @@ on:
         default: ubuntu-latest
         type: string
       go-version:
-        default: "1.26.0"
+        default: "1.26.6"
         type: string
       goreleaser-version:
         default: v2.13.3
@@ -129,6 +129,7 @@ jobs:
           version: ${{ inputs.goreleaser-version }}
           args: release --clean
         env:
+          GOTOOLCHAIN: auto
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Set up Ko
@@ -147,6 +148,7 @@ jobs:
           ko build --bare --tags="${VERSION}" ${{ inputs.build-path }} \
             --platform=${{ inputs.image-platforms }}
         env:
+          GOTOOLCHAIN: auto
           KO_DOCKER_REPO: ghcr.io/${{ github.repository }}
           VERSION: ${{ steps.version-after.outputs.version }}
           COMMIT: ${{ github.sha }}
