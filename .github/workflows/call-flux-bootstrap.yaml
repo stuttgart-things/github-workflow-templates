@@ -47,10 +47,10 @@ on:
         type: string
         default: "0.21.8"
       blueprints-version:
-        description: "Blueprints Dagger module version"
+        description: "Version of stuttgart-things/blueprints/flux"
         required: false
         type: string
-        default: v1.85.0
+        default: v2.6.1
       sops-module-version:
         description: "SOPS Dagger module version"
         required: false
@@ -98,7 +98,7 @@ jobs:
           verb: call
           module: github.com/stuttgart-things/blueprints/flux@${{ inputs.blueprints-version }}
           args: >-
-            flux-bootstrap
+            bootstrap
             --kube-config file:///tmp/kubeconfig
             --deploy-operator=true
             --commit-to-git=true
