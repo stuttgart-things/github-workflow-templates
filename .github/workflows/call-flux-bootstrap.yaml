@@ -51,6 +51,12 @@ on:
         required: false
         type: string
         default: v2.6.1
+      flux-cli-image:
+        description: "Flux CLI image used for the reconciliation wait"
+        required: false
+        type: string
+        # renovate: datasource=docker depName=ghcr.io/fluxcd/flux-cli
+        default: "ghcr.io/fluxcd/flux-cli:v2.9.4"
       sops-module-version:
         description: "SOPS Dagger module version"
         required: false
@@ -115,5 +121,6 @@ jobs:
             --encrypt-secrets=true
             --helmfile-ref "${{ inputs.helmfile-ref }}"
             --operator-version "${{ inputs.operator-version }}"
+            --flux-cli-image "${{ inputs.flux-cli-image }}"
             --wait-for-reconciliation=true
           cloud-token: ${{ secrets.DAGGER_CLOUD_TOKEN }}

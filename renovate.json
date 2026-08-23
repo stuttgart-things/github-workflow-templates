@@ -49,6 +49,16 @@
       "datasourceTemplate": "github-releases",
       "versioningTemplate": "semver",
       "extractVersionTemplate": "^v(?<version>.*)$"
+    },
+    {
+      "customType": "regex",
+      "description": "CONTAINER IMAGE DEFAULTS IN WORKFLOW INPUTS, MARKED WITH A renovate: KOMMENTAR",
+      "fileMatch": [
+        "^\\.github/workflows/[^/]+\\.ya?ml$"
+      ],
+      "matchStrings": [
+        "# renovate: datasource=(?<datasource>[a-z-]+) depName=(?<depName>[^\\s]+)\\n[ \\t]+default:[ \\t]*['\"]?[^'\"\\s:]+:(?<currentValue>[^'\"\\s]+)['\"]?"
+      ]
     }
   ]
 }
