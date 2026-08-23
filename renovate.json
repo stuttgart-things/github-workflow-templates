@@ -34,6 +34,21 @@
       "depNameTemplate": "dagger/dagger",
       "datasourceTemplate": "github-releases",
       "versioningTemplate": "semver"
+    },
+    {
+      "customType": "regex",
+      "description": "FLUX OPERATOR VERSION. LIVED IN FOUR PLACES ACROSS THREE REPOS AND ALL FOUR DISAGREED",
+      "fileMatch": [
+        "^\\.github/workflows/[^/]+\\.ya?ml$"
+      ],
+      "matchStrings": [
+        "operator-version:[ \\t]*(?<currentValue>v?\\d+\\.\\d+\\.\\d+)",
+        "operator-version:\\n(?:[ \\t]{8,}[^\\n]*\\n)*?[ \\t]{8,}default:[ \\t]*['\"]?(?<currentValue>v?\\d+\\.\\d+\\.\\d+)['\"]?"
+      ],
+      "depNameTemplate": "controlplaneio-fluxcd/flux-operator",
+      "datasourceTemplate": "github-releases",
+      "versioningTemplate": "semver",
+      "extractVersionTemplate": "^v(?<version>.*)$"
     }
   ]
 }
