@@ -7,14 +7,15 @@
   "customManagers": [
     {
       "customType": "regex",
-      "description": "STUTTGART-THINGS DAGGER ANSIBLE MODULE PIN. LIVES IN SIX PLACES ACROSS TWO REPOS AND WAS ALIGNED BY HAND THREE TIMES",
+      "description": "STUTTGART-THINGS DAGGER MODULE PINS (ansible + sops). THE SOPS PIN HAD DRIFTED TO FIVE DIFFERENT VERSIONS ACROSS FIVE WORKFLOWS BECAUSE NOTHING WAS WATCHING IT",
       "fileMatch": [
         "^\\.github/workflows/[^/]+\\.ya?ml$"
       ],
       "matchStrings": [
         "DAGGER_ANSIBLE_MODULE_VERSION:[ \\t]*(?<currentValue>v\\d+\\.\\d+\\.\\d+)",
         "dagger-module-version:[ \\t]*(?<currentValue>v\\d+\\.\\d+\\.\\d+)",
-        "dagger-module-version:\\n(?:[ \\t]+[^\\n]*\\n)*?[ \\t]+default:[ \\t]*['\"]?(?<currentValue>v?\\d+\\.\\d+\\.\\d+)['\"]?"
+        "dagger-module-version:\\n(?:[ \\t]+[^\\n]*\\n)*?[ \\t]+default:[ \\t]*['\"]?(?<currentValue>v?\\d+\\.\\d+\\.\\d+)['\"]?",
+        "sops-module-version:\\n(?:[ \\t]+[^\\n]*\\n)*?[ \\t]+default:[ \\t]*['\"]?(?<currentValue>v?\\d+\\.\\d+\\.\\d+)['\"]?"
       ],
       "depNameTemplate": "stuttgart-things/dagger",
       "datasourceTemplate": "github-releases",
