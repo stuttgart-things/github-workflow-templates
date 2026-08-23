@@ -159,3 +159,18 @@ runs:
         fi
 
         echo "All artifact references are valid."
+
+    # crane auth login writes the credential into ~/.docker/config.json and
+    # nothing takes it back out again. On a GitHub-hosted runner that does not
+    # matter, the machine is gone after the job. On a self-hosted runner the
+    # file persists, so the next job on that host presents this token to
+    # ghcr.io -- and once it has expired, the registry answers 403 on the
+    # anonymous token endpoint instead of handing out an anonymous token.
+    # Public images then stop pulling for every job on the host, not just this
+    # one. docker/login-action cleans up after itself in a post step; crane has
+    # no post hook and composite actions cannot declare one, so the logout has
+    # to be an explicit final step.
+    - name: Revoke crane credentials
+      if: always() && inputs.registry-token != ''
+      shell: bash
+      run: crane auth logout ghcr.io || true
