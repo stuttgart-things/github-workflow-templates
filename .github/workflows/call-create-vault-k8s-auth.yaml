@@ -101,7 +101,10 @@ on:
         description: "Version of stuttgart-things/blueprints/argocd"
         required: false
         type: string
-        default: v2.4.1
+        # v2.7.0 is the first release carrying --reviewer-name /
+        # --bound-service-account-names. On anything older the four inputs above
+        # are silently rejected by the module, so they move together.
+        default: v2.7.0
 
 permissions:
   contents: read
