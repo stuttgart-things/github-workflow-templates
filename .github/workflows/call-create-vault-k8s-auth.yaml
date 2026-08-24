@@ -50,6 +50,40 @@ on:
         type: string
         default: "3600"
 
+      # --- Splitting the reviewer from the workload ---
+      # Leave all four empty and reviewer == workload == <auth-name>, the shape
+      # ESO uses and the previous behaviour of this workflow.
+      #
+      # Set them when the workload owns its own ServiceAccount and should not be
+      # granted system:auth-delegator (the right to TokenReview ANY token in the
+      # cluster). cert-manager is the case in point: it logs in as `cert-manager`,
+      # created by its Helm chart, so the reviewer belongs somewhere harmless.
+      #
+      #   reviewer-name:                    vault-auth-reviewer
+      #   reviewer-namespace:               kube-system
+      #   bound-service-account-names:      cert-manager
+      #   bound-service-account-namespaces: cert-manager
+      reviewer-name:
+        description: "ServiceAccount Vault uses for TokenReview; empty = auth-name"
+        required: false
+        type: string
+        default: ""
+      reviewer-namespace:
+        description: "Namespace of the reviewer ServiceAccount; empty = namespace"
+        required: false
+        type: string
+        default: ""
+      bound-service-account-names:
+        description: "Comma-separated ServiceAccounts allowed to log in; empty = auth-name"
+        required: false
+        type: string
+        default: ""
+      bound-service-account-namespaces:
+        description: "Comma-separated namespaces of those ServiceAccounts; empty = namespace"
+        required: false
+        type: string
+        default: ""
+
       # --- Runtime / versions ---
       runs-on:
         required: false
@@ -103,5 +137,9 @@ jobs:
             --namespace ${{ inputs.namespace }}
             --token-policies ${{ inputs.token-policies }}
             --token-ttl ${{ inputs.token-ttl }}
+            ${{ inputs.reviewer-name && format('--reviewer-name {0}', inputs.reviewer-name) || '' }}
+            ${{ inputs.reviewer-namespace && format('--reviewer-namespace {0}', inputs.reviewer-namespace) || '' }}
+            ${{ inputs.bound-service-account-names && format('--bound-service-account-names {0}', inputs.bound-service-account-names) || '' }}
+            ${{ inputs.bound-service-account-namespaces && format('--bound-service-account-namespaces {0}', inputs.bound-service-account-namespaces) || '' }}
             --cache-buster ${{ github.run_id }}-${{ github.run_attempt }}
           cloud-token: ${{ secrets.DAGGER_CLOUD_TOKEN }}
