@@ -45,7 +45,7 @@ on:
         description: "Dagger CLI version"
         required: false
         type: string
-        default: "0.21.8"
+        default: "0.21.9"
       blueprints-version:
         description: "Version of stuttgart-things/blueprints/flux"
         required: false

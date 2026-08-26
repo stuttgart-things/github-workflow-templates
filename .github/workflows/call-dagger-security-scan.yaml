@@ -14,7 +14,7 @@ on:
         default: "github.com/stuttgart-things/dagger/go@v0.103.0"
         type: string
       dagger-version:
-        default: "0.21.8"
+        default: "0.21.9"
         type: string
       secure-go-version:
         default: "2.24.6"
