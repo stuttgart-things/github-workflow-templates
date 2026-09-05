@@ -23,7 +23,7 @@ on:
         description: "Flux operator version"
         required: false
         type: string
-        default: "0.58.1"
+        default: "0.59.0"
       helmfile-ref:
         description: "Helmfile reference for Flux operator"
         required: false
