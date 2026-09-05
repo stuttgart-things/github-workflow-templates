@@ -27,7 +27,7 @@ on:
         default: "true"
         type: string
       dagger-module:
-        default: "github.com/stuttgart-things/dagger/go@v0.103.0"
+        default: "github.com/stuttgart-things/dagger/go@v0.129.4"
         type: string
       dagger-version:
         default: "0.21.9"

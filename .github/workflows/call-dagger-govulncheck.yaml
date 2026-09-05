@@ -11,7 +11,7 @@ on:
         type: string
         description: "Directory containing Go source to scan (passed as --src)"
       dagger-module:
-        default: "github.com/stuttgart-things/dagger/go@v0.128.0"
+        default: "github.com/stuttgart-things/dagger/go@v0.129.4"
         type: string
       dagger-version:
         default: "0.21.9"
