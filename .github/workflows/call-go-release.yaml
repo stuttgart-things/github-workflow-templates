@@ -191,7 +191,7 @@ jobs:
       # homerun2-k8s-pitcher v1.0.0 with a one-line watch profile.
       - name: Verify the pushed base
         if: steps.version-after.outputs.new_release == 'true' && inputs.push-kustomize
-        uses: stuttgart-things/github-workflow-templates/actions/verify-kustomize-base@main
+        uses: stuttgart-things/github-workflow-templates/actions/verify-kustomize-base@24c44cec43b658faf7faddcd9d38d56f17448efb # main
         with:
           artifact-ref: ${{ inputs.kustomize-oci-repo }}:${{ steps.version-after.outputs.version }}
           registry-token: ${{ secrets.GITHUB_TOKEN }}
