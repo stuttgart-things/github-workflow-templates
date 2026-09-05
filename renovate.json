@@ -7,7 +7,7 @@
   "customManagers": [
     {
       "customType": "regex",
-      "description": "STUTTGART-THINGS DAGGER MODULE PINS (ansible + sops). THE SOPS PIN HAD DRIFTED TO FIVE DIFFERENT VERSIONS ACROSS FIVE WORKFLOWS BECAUSE NOTHING WAS WATCHING IT",
+      "description": "STUTTGART-THINGS DAGGER MODULE PINS (ansible + sops). THE SOPS PIN HAD DRIFTED TO FIVE DIFFERENT VERSIONS ACROSS FIVE WORKFLOWS BECAUSE NOTHING WAS WATCHING IT. THE FULL-PATH FORM (github.com/stuttgart-things/dagger/<mod>@vX.Y.Z INLINE IN A DEFAULT) WAS UNWATCHED TOO AND HAD DRIFTED TO v0.103.0 / v0.114.0 / v0.82.1",
       "fileMatch": [
         "^\\.github/workflows/[^/]+\\.ya?ml$"
       ],
@@ -15,7 +15,8 @@
         "DAGGER_ANSIBLE_MODULE_VERSION:[ \\t]*(?<currentValue>v\\d+\\.\\d+\\.\\d+)",
         "dagger-module-version:[ \\t]*(?<currentValue>v\\d+\\.\\d+\\.\\d+)",
         "dagger-module-version:\\n(?:[ \\t]+[^\\n]*\\n)*?[ \\t]+default:[ \\t]*['\"]?(?<currentValue>v?\\d+\\.\\d+\\.\\d+)['\"]?",
-        "sops-module-version:\\n(?:[ \\t]+[^\\n]*\\n)*?[ \\t]+default:[ \\t]*['\"]?(?<currentValue>v?\\d+\\.\\d+\\.\\d+)['\"]?"
+        "sops-module-version:\\n(?:[ \\t]+[^\\n]*\\n)*?[ \\t]+default:[ \\t]*['\"]?(?<currentValue>v?\\d+\\.\\d+\\.\\d+)['\"]?",
+        "github\\.com/stuttgart-things/dagger/[a-z-]+@(?<currentValue>v\\d+\\.\\d+\\.\\d+)"
       ],
       "depNameTemplate": "stuttgart-things/dagger",
       "datasourceTemplate": "github-releases",
