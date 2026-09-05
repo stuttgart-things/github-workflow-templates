@@ -96,7 +96,7 @@ on:
       dagger-version:
         required: false
         type: string
-        default: "0.21.8"
+        default: "0.21.9"
       argocd-module-version:
         description: "Version of stuttgart-things/blueprints/argocd"
         required: false

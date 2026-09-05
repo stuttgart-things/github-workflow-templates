@@ -10,7 +10,7 @@ on:
         default: k8s
         type: string
       dagger-version:
-        default: v0.21.8
+        default: v0.21.9
         type: string
       dagger-release-module:
         default: github.com/stuttgart-things/dagger/release@v0.82.1
