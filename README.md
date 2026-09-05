@@ -185,6 +185,39 @@ jobs:
 
 </details>
 
+<details><summary>VERIFY KUSTOMIZE OCI BASE</summary>
+
+Pulls a published kustomize OCI base back out of the registry and checks that
+every embedded YAML document inside a ConfigMap still parses.
+
+Both `call-push-kustomize.yaml` and `call-go-release.yaml` run this already —
+call it directly only when you push a base some other way.
+
+```yaml
+      - name: Verify the pushed base
+        uses: stuttgart-things/github-workflow-templates/actions/verify-kustomize-base@main
+        with:
+          artifact-ref: ghcr.io/stuttgart-things/my-app-kustomize:v1.2.3
+          registry-token: ${{ secrets.GITHUB_TOKEN }} # omit for a public package
+```
+
+Why it exists: a `ConfigMap` value serialised as a *quoted* multi-line scalar
+instead of a block literal (`|`) is still a perfectly valid manifest. YAML folds
+the quoted scalar's line breaks into spaces on read, so the embedded document
+arrives as one line with its indentation gone. The artifact pushes green, every
+manifest validates, and the consuming Pod dies at startup on
+
+```
+yaml: mapping values are not allowed in this context
+```
+
+That is exactly how `homerun2-git-pitcher:v1.0.0` and
+`homerun2-k8s-pitcher:v1.0.0` shipped. Verifying the *pulled* artifact rather
+than a local render is deliberate — it is the bytes consumers get, so a defect
+introduced by the publishing toolchain is in scope.
+
+</details>
+
 
 ## DEV
 

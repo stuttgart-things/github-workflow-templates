@@ -186,6 +186,16 @@ jobs:
           GITHUB_USER: ${{ github.actor }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      # A released base is the one nobody re-checks, so verify it here too --
+      # this is the path that shipped homerun2-git-pitcher v1.0.0 and
+      # homerun2-k8s-pitcher v1.0.0 with a one-line watch profile.
+      - name: Verify the pushed base
+        if: steps.version-after.outputs.new_release == 'true' && inputs.push-kustomize
+        uses: stuttgart-things/github-workflow-templates/actions/verify-kustomize-base@main
+        with:
+          artifact-ref: ${{ inputs.kustomize-oci-repo }}:${{ steps.version-after.outputs.version }}
+          registry-token: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Update release notes
         if: steps.version-after.outputs.new_release == 'true' && (inputs.stage-image || inputs.push-kustomize)
         env:

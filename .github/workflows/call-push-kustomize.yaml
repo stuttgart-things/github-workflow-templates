@@ -74,6 +74,15 @@ jobs:
           REF="${{ inputs.kustomize-oci-repo }}:${{ inputs.tag }}"
           echo "artifact-ref=${REF}" >> "$GITHUB_OUTPUT"
 
+      # The push itself proves nothing about the artifact's usefulness: a
+      # ConfigMap whose embedded YAML got folded onto one line is still a
+      # valid manifest and pushes green. Pull it back and parse it.
+      - name: Verify the pushed base
+        uses: stuttgart-things/github-workflow-templates/actions/verify-kustomize-base@main
+        with:
+          artifact-ref: ${{ steps.ref.outputs.artifact-ref }}
+          registry-token: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Summary
         run: |
           {

@@ -1,0 +1,137 @@
+---
+name: Verify Kustomize OCI Base
+description: |
+  Pulls a published kustomize OCI base back out of the registry and checks that
+  every embedded YAML document inside a ConfigMap still parses.
+
+  This catches values that were serialised as quoted multi-line scalars instead
+  of block literals. YAML folds a quoted scalar's line breaks into spaces on
+  read, so the embedded document arrives as a single line with its indentation
+  gone -- the manifest itself stays valid, the artifact pushes fine, and the
+  consuming Pod dies at startup on "mapping values are not allowed in this
+  context". Nothing upstream of the Pod notices.
+
+  Verifying the pulled artifact rather than a local render is deliberate: it is
+  the bytes consumers actually get, so a defect introduced by the publishing
+  toolchain is in scope.
+inputs:
+  artifact-ref:
+    description: "Fully-qualified OCI reference to verify, e.g. ghcr.io/org/app-kustomize:v1.2.3"
+    required: true
+  registry-token:
+    description: "Token for the registry (GITHUB_TOKEN for ghcr.io). Omit for anonymous pulls."
+    required: false
+    default: ""
+  registry-user:
+    description: "Username for the registry."
+    required: false
+    default: "token"
+  oras-version:
+    description: "oras release used to pull the artifact."
+    required: false
+    default: "1.2.2"
+
+outputs:
+  checked:
+    description: "Number of embedded YAML keys that were parsed"
+    value: ${{ steps.verify.outputs.checked }}
+
+runs:
+  using: composite
+  steps:
+    - name: Install oras
+      shell: bash
+      env:
+        ORAS_VERSION: ${{ inputs.oras-version }}
+      run: |
+        set -euo pipefail
+        # $RUNNER_TEMP/bin keeps this sudo-free, which self-hosted runners need.
+        mkdir -p "${RUNNER_TEMP}/bin"
+        curl -sSfL "https://github.com/oras-project/oras/releases/download/v${ORAS_VERSION}/oras_${ORAS_VERSION}_linux_amd64.tar.gz" \
+          | tar xz -C "${RUNNER_TEMP}/bin" oras
+        echo "${RUNNER_TEMP}/bin" >> "$GITHUB_PATH"
+
+    - name: Authenticate oras
+      if: inputs.registry-token != ''
+      shell: bash
+      env:
+        REGISTRY_TOKEN: ${{ inputs.registry-token }}
+        REGISTRY_USER: ${{ inputs.registry-user }}
+        ARTIFACT_REF: ${{ inputs.artifact-ref }}
+      run: |
+        set -euo pipefail
+        REGISTRY="${ARTIFACT_REF%%/*}"
+        echo "${REGISTRY_TOKEN}" | oras login "${REGISTRY}" -u "${REGISTRY_USER}" --password-stdin
+
+    - name: Verify embedded YAML
+      id: verify
+      shell: bash
+      env:
+        ARTIFACT_REF: ${{ inputs.artifact-ref }}
+      run: |
+        set -euo pipefail
+
+        # PyYAML ships with most runner images; install it only if it is absent.
+        # Newer Debian/Ubuntu pythons are PEP 668 managed, hence the fallback.
+        python3 -c 'import yaml' 2>/dev/null \
+          || pip3 install --quiet pyyaml 2>/dev/null \
+          || pip3 install --quiet --break-system-packages pyyaml
+
+        PULL_DIR="${RUNNER_TEMP}/kustomize-base-verify"
+        rm -rf "${PULL_DIR}"
+        mkdir -p "${PULL_DIR}"
+        oras pull "${ARTIFACT_REF}" -o "${PULL_DIR}"
+
+        echo "Pulled ${ARTIFACT_REF}:"
+        ls -1 "${PULL_DIR}"
+        echo ""
+
+        python3 - "${PULL_DIR}" <<'PY'
+        import glob
+        import os
+        import sys
+
+        import yaml
+
+        base = sys.argv[1]
+        failures = []
+        checked = 0
+
+        for path in sorted(glob.glob(os.path.join(base, "*.y*ml"))):
+            name = os.path.basename(path)
+            with open(path) as fh:
+                try:
+                    docs = list(yaml.safe_load_all(fh))
+                except yaml.YAMLError as exc:
+                    failures.append((name, "<manifest>", str(exc).split("\n")[0]))
+                    continue
+            for doc in docs:
+                if not isinstance(doc, dict) or doc.get("kind") != "ConfigMap":
+                    continue
+                for key, value in (doc.get("data") or {}).items():
+                    if not key.endswith((".yaml", ".yml")) or not isinstance(value, str):
+                        continue
+                    checked += 1
+                    try:
+                        yaml.safe_load(value)
+                    except yaml.YAMLError as exc:
+                        failures.append((name, key, str(exc).split("\n")[0]))
+
+        with open(os.environ["GITHUB_OUTPUT"], "a") as out:
+            out.write(f"checked={checked}\n")
+
+        if failures:
+            print(f"FAIL: {len(failures)} of {checked} embedded YAML key(s) do not parse")
+            for name, key, err in failures:
+                print(f"  {name} -> data.{key}: {err}")
+            print("")
+            print("A quoted multi-line scalar is the usual cause: YAML folds its")
+            print("line breaks to spaces on read, so the embedded document loses")
+            print("its indentation. It must be emitted as a block literal (|).")
+            sys.exit(1)
+
+        if checked == 0:
+            print("No embedded YAML keys in this base -- nothing to verify.")
+        else:
+            print(f"OK: {checked} embedded YAML key(s) parse.")
+        PY
