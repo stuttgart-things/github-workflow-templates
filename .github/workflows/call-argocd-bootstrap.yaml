@@ -201,7 +201,7 @@ on:
         description: "Version of stuttgart-things/dagger/sops (for kubeconfig decrypt step)"
         required: false
         type: string
-        default: v0.126.0
+        default: v0.127.3
 
 permissions:
   contents: read
