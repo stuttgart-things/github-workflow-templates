@@ -48,7 +48,7 @@ on:
         description: "SOPS Dagger module version"
         required: false
         type: string
-        default: v0.127.3
+        default: v0.128.0
 
 jobs:
   Flux-Destroy:

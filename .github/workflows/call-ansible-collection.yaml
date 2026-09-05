@@ -21,7 +21,7 @@ on:
       dagger-module-version:
         required: false
         type: string
-        default: v0.127.3
+        default: v0.128.0
       environment-name:
         required: false
         type: string
