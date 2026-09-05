@@ -19,10 +19,29 @@ on:
       govulncheck-version:
         default: "v1.7.0"
         type: string
+      # Set this to the Go version your release image is built from, not to
+      # whatever your go.mod happens to say. It is a floor, not a pin:
+      # GOTOOLCHAIN is auto, so a go.mod requiring something newer wins --
+      # but nothing raises the toolchain above that requirement. A project
+      # whose go.mod says "go 1.26.0" and whose image is built from
+      # golang:1.27-alpine gets scanned at 1.26.0, and the standard library
+      # of a version it does not ship is what govulncheck then reports on.
+      #
+      # That is not theoretical. schmetterpause's first run failed with 20
+      # reachable vulnerabilities, all in the standard library, all "Fixed
+      # in: go1.26.1", and none of them present in the binary it ships.
+      # Setting this to match its build image took the reachable count to 0.
+      #
+      # The failure mode is silent: it does not error, it produces a
+      # confident red run about a standard library you do not use.
       go-version:
         default: "1.25.5"
         type: string
-        description: "Toolchain floor for the scan container. GOTOOLCHAIN is auto, so a newer go.mod wins."
+        description: >-
+          Toolchain floor for the scan container, not a pin. Should match the Go
+          version your release image is built from; if it is below what go.mod
+          requires, the scan runs at go.mod's minimum, which may be older than
+          what you ship.
       format:
         default: "text"
         type: string
