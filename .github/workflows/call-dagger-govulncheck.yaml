@@ -1,0 +1,105 @@
+---
+name: Dagger Govulncheck
+on:
+  workflow_call:
+    inputs:
+      runs-on:
+        default: ubuntu-latest
+        type: string
+      working-directory:
+        default: "."
+        type: string
+        description: "Directory containing Go source to scan (passed as --src)"
+      dagger-module:
+        default: "github.com/stuttgart-things/dagger/go@v0.128.0"
+        type: string
+      dagger-version:
+        default: "0.21.9"
+        type: string
+      govulncheck-version:
+        default: "v1.7.0"
+        type: string
+      go-version:
+        default: "1.25.5"
+        type: string
+        description: "Toolchain floor for the scan container. GOTOOLCHAIN is auto, so a newer go.mod wins."
+      format:
+        default: "text"
+        type: string
+        description: "text | json | sarif | openvex"
+      report-file:
+        default: "govulncheck-report.txt"
+        type: string
+        description: "Export path for the report. Match the extension to format."
+      artifact-name:
+        default: "govulncheck-report"
+        type: string
+      fail-on-finding:
+        default: true
+        type: boolean
+        description: "Fail the job when a reachable vulnerability is found."
+      no-cache:
+        default: false
+        type: boolean
+        description: "Bypass Dagger's result cache so the scan reads a current vulnerability database. Costs a full second scan when fail-on-finding is set; meant for scheduled runs, not every pull request."
+      continue-on-error:
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+jobs:
+  govulncheck:
+    name: govulncheck via Dagger
+    runs-on: ${{ inputs.runs-on }}
+    continue-on-error: ${{ inputs.continue-on-error }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      # Two calls, not one. With --fail-on-finding the module returns an error,
+      # so `export` is never reached and the report goes missing exactly when
+      # somebody wants it. This pass writes the report; the pass below decides
+      # the build.
+      - name: Run govulncheck (report)
+        uses: dagger/dagger-for-github@27b130bf0f79a7f6fbbbe0fbca6760dc9bb40a77 # v8.4.1
+        with:
+          version: ${{ inputs.dagger-version }}
+          module: ${{ inputs.dagger-module }}
+          args: >-
+            govulncheck
+            --src ${{ inputs.working-directory }}
+            --govulncheck-version ${{ inputs.govulncheck-version }}
+            --go-version ${{ inputs.go-version }}
+            --format ${{ inputs.format }}
+            --no-cache=${{ inputs.no-cache }}
+            export --path ./${{ inputs.report-file }}
+
+      # Before the gate: a failing gate must not take the report with it.
+      - name: Upload report
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ${{ inputs.artifact-name }}
+          path: ${{ inputs.report-file }}
+
+      # Hits the cache from the report pass, so it costs nothing. Pinned to
+      # text because govulncheck sets exit 3 on a finding only in text mode --
+      # json, sarif and openvex exit 0 and expect the caller to parse.
+      - name: Gate on reachable vulnerabilities
+        if: ${{ inputs.fail-on-finding }}
+        uses: dagger/dagger-for-github@27b130bf0f79a7f6fbbbe0fbca6760dc9bb40a77 # v8.4.1
+        with:
+          version: ${{ inputs.dagger-version }}
+          module: ${{ inputs.dagger-module }}
+          args: >-
+            govulncheck
+            --src ${{ inputs.working-directory }}
+            --govulncheck-version ${{ inputs.govulncheck-version }}
+            --go-version ${{ inputs.go-version }}
+            --format text
+            --fail-on-finding=true
