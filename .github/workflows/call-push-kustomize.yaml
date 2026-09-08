@@ -31,6 +31,15 @@ on:
         required: true
         type: string
         description: "Tag to push, e.g. pr-42-abc1234 or v1.2.3"
+      ref:
+        default: ""
+        type: string
+        description: >-
+          Commit, branch or tag to render from. Empty takes checkout's default,
+          which on a pull_request is the merge commit GitHub builds — not the
+          head. A caller that names its artefact after `head_sha` has to pass
+          that head_sha here, or it publishes a tag that does not identify what
+          it built.
       additional-tags:
         default: ""
         type: string
@@ -73,6 +82,12 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # Empty on push and workflow_dispatch, where checkout takes its own
+          # default. It matters on a pull request: the source rendered here may
+          # be exactly what the pull request changes, so the artefact has to
+          # come from the commit its tag names.
+          ref: ${{ inputs.ref }}
 
       - name: Push kustomize base
         uses: dagger/dagger-for-github@27b130bf0f79a7f6fbbbe0fbca6760dc9bb40a77 # v8.4.1
