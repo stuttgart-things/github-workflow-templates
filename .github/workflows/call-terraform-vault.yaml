@@ -52,7 +52,7 @@ on:
       sops-module-version:
         required: false
         type: string
-        default: v0.129.4
+        default: v0.129.5
       terraform-version:
         required: false
         type: string

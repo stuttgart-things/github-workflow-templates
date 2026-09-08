@@ -61,7 +61,7 @@ on:
         description: "SOPS Dagger module version"
         required: false
         type: string
-        default: v0.129.4
+        default: v0.129.5
 
 jobs:
   Flux-Bootstrap:
