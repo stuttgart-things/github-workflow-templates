@@ -31,6 +31,21 @@ on:
         required: true
         type: string
         description: "Tag to push, e.g. pr-42-abc1234 or v1.2.3"
+      additional-tags:
+        default: ""
+        type: string
+        description: >-
+          Comma-separated extra tags, applied with `oras tag` to the digest just
+          pushed rather than by publishing again. That distinction is the whole
+          point: a second publish re-renders the base and oras stamps a fresh
+          created annotation, so the two tags land on two different digests and
+          both report success while disagreeing. Typically "latest".
+      oras-version:
+        default: "1.2.2"
+        type: string
+        description: >-
+          Kept at the version the kcl module installs, so a tag written here and
+          an artefact pushed there cannot come from two different oras.
       dagger-kcl-module:
         default: github.com/stuttgart-things/dagger/kcl@v0.129.4
         type: string
@@ -92,6 +107,56 @@ jobs:
         with:
           artifact-ref: ${{ steps.ref.outputs.artifact-ref }}
           registry-token: ${{ secrets.GITHUB_TOKEN }}
+
+      # A tag on what was just pushed, never a second publish. Both times this
+      # drifted in a consuming repository it was invisible until somebody
+      # compared digests by hand, and both tags reported success while
+      # disagreeing — so the agreement is proved here rather than assumed.
+      - name: Apply additional tags
+        if: inputs.additional-tags != ''
+        env:
+          ORAS_VERSION: ${{ inputs.oras-version }}
+          REPO: ${{ inputs.kustomize-oci-repo }}
+          TAG: ${{ inputs.tag }}
+          EXTRA: ${{ inputs.additional-tags }}
+          GITHUB_USER: ${{ github.actor }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          mkdir -p "${RUNNER_TEMP}/bin"
+          curl -fsSL "https://github.com/oras-project/oras/releases/download/v${ORAS_VERSION}/oras_${ORAS_VERSION}_linux_amd64.tar.gz" \
+            | tar xz -C "${RUNNER_TEMP}/bin" oras
+          export PATH="${RUNNER_TEMP}/bin:${PATH}"
+
+          printenv GITHUB_TOKEN \
+            | oras login "${REPO%%/*}" --username "${GITHUB_USER}" --password-stdin
+
+          digest() {
+            oras manifest fetch --descriptor "$1" \
+              | sed 's/.*"digest":"\([^"]*\)".*/\1/'
+          }
+
+          pushed="$(digest "${REPO}:${TAG}")"
+
+          # Split without a pipe: an `exit 1` inside `… | while read` only
+          # leaves the subshell, and whether that fails the step then depends
+          # on pipefail being set. This does not depend on anything.
+          IFS=',' read -ra extra <<< "${EXTRA}"
+
+          for t in "${extra[@]}"; do
+            t="${t//[[:space:]]/}"
+            [ -n "${t}" ] || continue
+
+            oras tag "${REPO}:${TAG}" "${t}"
+
+            got="$(digest "${REPO}:${t}")"
+            if [ "${got}" != "${pushed}" ]; then
+              echo "${REPO}: ${t} is ${got}, ${TAG} is ${pushed} — the tags do not identify the same artefact" >&2
+              exit 1
+            fi
+            echo "${REPO}: ${t} and ${TAG} agree on ${pushed}"
+          done
 
       - name: Summary
         run: |
