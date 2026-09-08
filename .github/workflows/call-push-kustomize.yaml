@@ -14,6 +14,15 @@ on:
         default: tests/kcl-deploy-profile.yaml
         type: string
         description: "KCL profile file (passed as --parameters-file)"
+      kcl-parameters:
+        default: ""
+        type: string
+        description: >-
+          Comma-separated key=value overrides, passed as --parameters. They win
+          over the profile file, which is what makes a per-build value possible
+          at all: an image reference belongs to the artefact being published,
+          not to a profile committed weeks earlier. Omitted from the call when
+          empty, so existing callers are unaffected.
       kustomize-oci-repo:
         required: true
         type: string
@@ -59,6 +68,7 @@ jobs:
             push-kustomize-base
             --source ./${{ inputs.kcl-source-dir }}
             --parameters-file ./${{ inputs.kcl-profile-file }}
+            ${{ inputs.kcl-parameters != '' && format('--parameters {0}', inputs.kcl-parameters) || '' }}
             --address ${{ inputs.kustomize-oci-repo }}
             --tag ${{ inputs.tag }}
             --user env:GITHUB_USER
