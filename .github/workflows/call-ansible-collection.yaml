@@ -132,7 +132,7 @@ jobs:
       contents: read
       id-token: write
       attestations: write
-    uses: stuttgart-things/github-workflow-templates/.github/workflows/call-release-artifact.yaml@63d8d5a5390f27e7a4d9304e2ef8d98dde3c0272 # main
+    uses: stuttgart-things/github-workflow-templates/.github/workflows/call-release-artifact.yaml@24c44cec43b658faf7faddcd9d38d56f17448efb # main
     with:
       runs-on: ${{ inputs.runs-on }}
       environment-name: k8s
