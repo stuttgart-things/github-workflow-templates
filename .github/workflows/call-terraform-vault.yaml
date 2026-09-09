@@ -75,6 +75,17 @@ on:
         required: false
         type: string
         default: secrets/envs/vault-ca-terraform-tfvars.json.tmpl
+      # cluster-name has been doing two jobs: naming the cluster to terraform,
+      # and locating its kubeconfig. Those disagree in practice -- kubeconfigs
+      # are named inconsistently (philly.yaml and cicd-crossplane.yaml carry no
+      # lab, labda-cicd-machinery-test5.yaml and labda-sthings-infra.yaml do) --
+      # so a caller whose file is prefixed had to pass the prefixed name and
+      # got it into every Vault object the config names.
+      kubeconfig-file:
+        description: SOPS-encrypted kubeconfig path. Empty derives it from cluster-name, as before.
+        required: false
+        type: string
+        default: ""
   workflow_dispatch:
     inputs:
       lab:
@@ -108,7 +119,7 @@ on:
         default: main
 
 env:
-  KUBE_CONFIG_ENC: secrets/kubeconfigs/${{ inputs.cluster-name }}.yaml
+  KUBE_CONFIG_ENC: ${{ inputs.kubeconfig-file != '' && inputs.kubeconfig-file || format('secrets/kubeconfigs/{0}.yaml', inputs.cluster-name) }}
   # `||` on an empty string picks the fallback, so an unset encrypted-env keeps
   # the vault-infra-<lab> name this workflow has always derived.
   ENCRYPTED_ENV: ${{ inputs.encrypted-env != '' && inputs.encrypted-env || format('secrets/envs/vault-infra-{0}.enc.yaml', inputs.lab) }}
