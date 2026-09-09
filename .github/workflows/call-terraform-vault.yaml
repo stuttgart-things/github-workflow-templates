@@ -228,16 +228,34 @@ jobs:
             apply|destroy) APPROVE="-auto-approve" ;;
             *)             APPROVE="" ;;
           esac
+          # vault_ca_bundle is passed only when there is one. Terraform ERRORS on
+          # a -var the root module does not declare, so sending it unconditionally
+          # restricts this workflow to configs that take a CA bundle -- i.e. the
+          # cert issuer. A config doing something else in Vault, such as a
+          # per-cluster KV mount and read policy, has no use for it and fails
+          # before it starts.
+          #
+          # The dagger path already passes only cluster_name and kubeconfig_path,
+          # so it never had this limit; this brings the cli path in line rather
+          # than adding a new behaviour.
+          TF_VARS=(
+            -var="cluster_name=${{ inputs.cluster-name }}"
+            -var="kubeconfig_path=/tmp/kubeconfig"
+            -var="vault_addr=${VAULT_ADDR}"
+          )
+          if [[ -s /tmp/vault_ca_bundle ]]; then
+            TF_VARS+=(-var="vault_ca_bundle=$(cat /tmp/vault_ca_bundle)")
+          else
+            echo "no vault_ca_bundle in the credentials -- not passing the variable"
+          fi
+
           MAX_ATTEMPTS=3
           ATTEMPT=1
           until terraform -chdir="${TF_DIR}" \
                   ${{ inputs.operation }} \
                   ${APPROVE} \
                   -compact-warnings \
-                  -var="cluster_name=${{ inputs.cluster-name }}" \
-                  -var="kubeconfig_path=/tmp/kubeconfig" \
-                  -var="vault_addr=${VAULT_ADDR}" \
-                  -var="vault_ca_bundle=$(cat /tmp/vault_ca_bundle)"
+                  "${TF_VARS[@]}"
           do
             if [[ $ATTEMPT -ge $MAX_ATTEMPTS ]]; then
               echo "::error::terraform ${{ inputs.operation }} failed after ${MAX_ATTEMPTS} attempts"
