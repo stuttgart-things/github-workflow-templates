@@ -57,6 +57,24 @@ on:
         required: false
         type: string
         default: "1.14.9"
+      # The two files below were env constants until now, which tied this
+      # workflow to ONE terraform config: the cert issuer, whose tfvars needs a
+      # vaultCaBundle and whose credentials live under the vault-infra-<lab>
+      # name. A caller doing anything else in Vault -- a per-cluster KV mount
+      # and read policy, say -- needs different values for both.
+      #
+      # The defaults are exactly what was hardcoded, so every existing caller
+      # keeps its current behaviour without naming either input.
+      encrypted-env:
+        description: SOPS-encrypted file holding the Vault/OpenBao credentials
+        required: false
+        type: string
+        default: ""
+      tfvars-template:
+        description: Go-template rendered into the terraform dir as tfvars
+        required: false
+        type: string
+        default: secrets/envs/vault-ca-terraform-tfvars.json.tmpl
   workflow_dispatch:
     inputs:
       lab:
@@ -91,8 +109,13 @@ on:
 
 env:
   KUBE_CONFIG_ENC: secrets/kubeconfigs/${{ inputs.cluster-name }}.yaml
-  ENCRYPTED_ENV: secrets/envs/vault-infra-${{ inputs.lab }}.enc.yaml
-  TFVARS_TEMPLATE: secrets/envs/vault-ca-terraform-tfvars.json.tmpl
+  # `||` on an empty string picks the fallback, so an unset encrypted-env keeps
+  # the vault-infra-<lab> name this workflow has always derived.
+  ENCRYPTED_ENV: ${{ inputs.encrypted-env != '' && inputs.encrypted-env || format('secrets/envs/vault-infra-{0}.enc.yaml', inputs.lab) }}
+  # Same fallback shape, and it is load-bearing: workflow_dispatch does not
+  # define these inputs, so a dispatched run reads them as empty and would
+  # otherwise render with no template file at all.
+  TFVARS_TEMPLATE: ${{ inputs.tfvars-template != '' && inputs.tfvars-template || 'secrets/envs/vault-ca-terraform-tfvars.json.tmpl' }}
   TF_DIR: ${{ inputs.terraform-dir }}
   CONTAINER_KUBECONFIG: /root/.kube/config
 
