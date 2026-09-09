@@ -201,9 +201,13 @@ jobs:
           VT=$(jq -r '.VAULT_TOKEN'       /tmp/rendered-secrets.json)
           VA=$(jq -r '.VAULT_ADDR'        /tmp/rendered-secrets.json)
           VS=$(jq -r '.VAULT_SKIP_VERIFY' /tmp/rendered-secrets.json)
-          CA=$(jq -r '.vault_ca_bundle'   /tmp/rendered-secrets.json)
+          # `// empty` matters: on a MISSING key `jq -r` prints the four-character
+          # string "null", not nothing. That lands in /tmp/vault_ca_bundle, makes
+          # every emptiness test see a non-empty file, and gets "null" passed to
+          # terraform as the CA bundle -- and masked in the logs as a secret.
+          CA=$(jq -r '.vault_ca_bundle // empty' /tmp/rendered-secrets.json)
           echo "::add-mask::${VT}"
-          echo "::add-mask::${CA}"
+          [[ -n "${CA}" ]] && echo "::add-mask::${CA}"
           {
             echo "VAULT_TOKEN=${VT}"
             echo "VAULT_ADDR=${VA}"
