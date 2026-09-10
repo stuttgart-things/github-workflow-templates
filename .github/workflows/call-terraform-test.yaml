@@ -50,4 +50,4 @@ jobs:
           terraform init
           terraform test \
             -test-directory=${{ inputs.test-directory }} \
-            ${{ inputs.verbose == 'true' && '-verbose' || '' }}
+            ${{ inputs.verbose && '-verbose' || '' }}
