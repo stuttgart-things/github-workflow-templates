@@ -22,6 +22,14 @@ on:
         default: false
         required: true
         type: boolean
+      working-directory:
+        description: "Directory holding the Terraform configuration, relative to the repository root (for repositories where it is not at the root)"
+        default: "."
+        type: string
+      fmt-check:
+        description: "Fail when files are not formatted (terraform fmt -check -diff -recursive). Off by default, which keeps the previous behaviour: fmt rewrites the runner's checkout and never fails"
+        default: false
+        type: boolean
 
 jobs:
   Terraform-Validate:
@@ -33,9 +41,10 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - run: |
+      - working-directory: ${{ inputs.working-directory }}
+        run: |
           terraform init
-          terraform fmt
+          terraform fmt ${{ inputs.fmt-check && '-check -diff -recursive' || '' }}
           terraform validate
 
   Terraform-Lint:
@@ -47,6 +56,7 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - run: |
+      - working-directory: ${{ inputs.working-directory }}
+        run: |
           ls -lta
           tflint --recursive

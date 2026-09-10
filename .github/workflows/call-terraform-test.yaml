@@ -18,8 +18,12 @@ on:
         default: false
         required: true
         type: boolean
+      working-directory:
+        description: "Directory holding the Terraform configuration under test, relative to the repository root (for repositories where it is not at the root)"
+        default: "."
+        type: string
       test-directory:
-        description: "Directory containing tftest.hcl files"
+        description: "Directory containing tftest.hcl files, relative to working-directory"
         default: tests
         type: string
       verbose:
@@ -41,8 +45,9 @@ jobs:
           fetch-depth: '0'
 
       - name: Run terraform test
+        working-directory: ${{ inputs.working-directory }}
         run: |
           terraform init
           terraform test \
             -test-directory=${{ inputs.test-directory }} \
-            ${{ inputs.verbose == 'true' && '-verbose' || '' }}
+            ${{ inputs.verbose && '-verbose' || '' }}
