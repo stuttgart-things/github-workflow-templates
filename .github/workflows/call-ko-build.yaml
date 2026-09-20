@@ -34,6 +34,15 @@ on:
         default: latest
         type: string
         description: "Comma-separated tags to push (e.g. pr-42-abc1234,latest)"
+      ref:
+        default: ""
+        type: string
+        description: >-
+          Commit, branch or tag to build from. Empty takes checkout's default,
+          which on a pull_request is the merge commit GitHub builds — not the
+          head. A caller that names its image after `head_sha` has to pass that
+          head_sha here, or it publishes a tag that does not identify what it
+          built.
       push:
         default: true
         type: boolean
@@ -57,6 +66,11 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # Empty on push and workflow_dispatch, where checkout takes its own
+          # default. It matters on a pull request: the image built here is what
+          # the tag names, so it has to come from the commit the tag names.
+          ref: ${{ inputs.ref }}
 
       - name: Set up Go
         uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
