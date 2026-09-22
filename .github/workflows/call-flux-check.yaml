@@ -33,7 +33,7 @@ on:
         description: "SOPS Dagger module version"
         required: false
         type: string
-        default: v0.132.0
+        default: v0.133.0
       kubectl-image:
         description: "Container image with kubectl"
         required: false

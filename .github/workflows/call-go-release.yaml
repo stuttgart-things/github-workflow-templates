@@ -62,10 +62,10 @@ on:
         type: boolean
         description: Semantic-release dry run only
       dagger-release-module:
-        default: github.com/stuttgart-things/dagger/release@v0.132.0
+        default: github.com/stuttgart-things/dagger/release@v0.133.0
         type: string
       dagger-kcl-module:
-        default: github.com/stuttgart-things/dagger/kcl@v0.132.0
+        default: github.com/stuttgart-things/dagger/kcl@v0.133.0
         type: string
 
 permissions:
