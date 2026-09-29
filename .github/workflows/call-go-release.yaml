@@ -65,7 +65,7 @@ on:
         default: github.com/stuttgart-things/dagger/release@v0.132.0
         type: string
       dagger-kcl-module:
-        default: github.com/stuttgart-things/dagger/kcl@v0.132.0
+        default: github.com/stuttgart-things/dagger/kcl@v0.133.1
         type: string
 
 permissions:
