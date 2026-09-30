@@ -59,7 +59,7 @@ on:
         description: "Version of stuttgart-things/dagger/kcl to invoke"
         required: false
         type: string
-        default: v0.82.1
+        default: v0.134.0
       kcl-image:
         description: "KCL CLI image used for the formatting check"
         required: false
