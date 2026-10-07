@@ -48,10 +48,12 @@ on:
       blueprints-version:
         required: false
         type: string
+        # renovate: datasource=github-releases depName=stuttgart-things/blueprints
         default: v1.82.0
       sops-module-version:
         required: false
         type: string
+        # renovate: datasource=github-releases depName=stuttgart-things/dagger
         default: v0.136.3
       terraform-version:
         required: false

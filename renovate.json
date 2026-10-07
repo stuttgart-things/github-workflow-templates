@@ -7,15 +7,11 @@
   "customManagers": [
     {
       "customType": "regex",
-      "description": "STUTTGART-THINGS DAGGER MODULE PINS (ansible + sops). THE SOPS PIN HAD DRIFTED TO FIVE DIFFERENT VERSIONS ACROSS FIVE WORKFLOWS BECAUSE NOTHING WAS WATCHING IT. THE FULL-PATH FORM (github.com/stuttgart-things/dagger/<mod>@vX.Y.Z INLINE IN A DEFAULT) WAS UNWATCHED TOO AND HAD DRIFTED TO v0.103.0 / v0.114.0 / v0.82.1",
+      "description": "STUTTGART-THINGS DAGGER MODULE PINS IN THE INLINE FULL-PATH FORM (github.com/stuttgart-things/dagger/<mod>@vX.Y.Z), WHICH NAMES ITS REPO ITSELF. INPUT DEFAULTS ARE ANNOTATED INSTEAD, SEE THE NEXT MANAGER",
       "fileMatch": [
         "^\\.github/workflows/[^/]+\\.ya?ml$"
       ],
       "matchStrings": [
-        "DAGGER_ANSIBLE_MODULE_VERSION:[ \\t]*(?<currentValue>v\\d+\\.\\d+\\.\\d+)",
-        "dagger-module-version:[ \\t]*(?<currentValue>v\\d+\\.\\d+\\.\\d+)",
-        "dagger-module-version:\\n(?:[ \\t]+[^\\n]*\\n)*?[ \\t]+default:[ \\t]*['\"]?(?<currentValue>v?\\d+\\.\\d+\\.\\d+)['\"]?",
-        "sops-module-version:\\n(?:[ \\t]+[^\\n]*\\n)*?[ \\t]+default:[ \\t]*['\"]?(?<currentValue>v?\\d+\\.\\d+\\.\\d+)['\"]?",
         "github\\.com/stuttgart-things/dagger/[a-z-]+@(?<currentValue>v\\d+\\.\\d+\\.\\d+)"
       ],
       "depNameTemplate": "stuttgart-things/dagger",
@@ -24,15 +20,13 @@
     },
     {
       "customType": "regex",
-      "description": "STUTTGART-THINGS BLUEPRINTS MODULE PIN (blueprints-version, e.g. blueprints/flux IN call-flux-bootstrap/destroy). UNWATCHED UNTIL NOW AND HAD DRIFTED TO v2.6.1, SO CALLERS WITHOUT THEIR OWN VALUE MISSED THE FLUX CACHE FIX (stuttgart-things/blueprints#182)",
+      "description": "STUTTGART-THINGS MODULE PINS IN INPUT DEFAULTS AND with: VALUES, EACH MARKED WITH A '# renovate: datasource=github-releases depName=stuttgart-things/<dagger|blueprints>' LINE DIRECTLY ABOVE. THE INPUT NAME DOES NOT SAY WHICH REPO A PIN BELONGS TO: dagger-module-version AND argocd-module-version POINT AT BLUEPRINTS IN SOME WORKFLOWS AND AT DAGGER IN OTHERS, AND MOST *-module-version INPUTS WERE NOT WATCHED AT ALL (#201)",
       "fileMatch": [
         "^\\.github/workflows/[^/]+\\.ya?ml$"
       ],
       "matchStrings": [
-        "blueprints-version:\\n(?:[ \\t]+[^\\n]*\\n)*?[ \\t]+default:[ \\t]*['\"]?(?<currentValue>v?\\d+\\.\\d+\\.\\d+)['\"]?"
+        "# renovate: datasource=(?<datasource>github-releases) depName=(?<depName>stuttgart-things/(?:dagger|blueprints))\\n[ \\t]+[A-Za-z_-]+:[ \\t]*['\"]?(?<currentValue>v\\d+\\.\\d+\\.\\d+)['\"]?"
       ],
-      "depNameTemplate": "stuttgart-things/blueprints",
-      "datasourceTemplate": "github-releases",
       "versioningTemplate": "semver"
     },
     {

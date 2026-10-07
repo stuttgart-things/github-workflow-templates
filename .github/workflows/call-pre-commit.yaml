@@ -48,7 +48,8 @@ on:
         description: "Version of stuttgart-things/dagger/linting to invoke"
         required: false
         type: string
-        default: v0.115.0
+        # renovate: datasource=github-releases depName=stuttgart-things/dagger
+        default: v0.137.0
       artifact-retention-days:
         required: false
         type: number

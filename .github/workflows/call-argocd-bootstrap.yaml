@@ -196,11 +196,13 @@ on:
         description: "Version of stuttgart-things/blueprints/argocd"
         required: false
         type: string
+        # renovate: datasource=github-releases depName=stuttgart-things/blueprints
         default: v2.4.0
       sops-module-version:
         description: "Version of stuttgart-things/dagger/sops (for kubeconfig decrypt step)"
         required: false
         type: string
+        # renovate: datasource=github-releases depName=stuttgart-things/dagger
         default: v0.136.3
 
 permissions:

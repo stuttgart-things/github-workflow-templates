@@ -32,7 +32,8 @@ on:
         description: "Version of stuttgart-things/dagger/argocd to invoke"
         required: false
         type: string
-        default: v0.104.0
+        # renovate: datasource=github-releases depName=stuttgart-things/dagger
+        default: v0.137.0
 
 permissions:
   contents: read
