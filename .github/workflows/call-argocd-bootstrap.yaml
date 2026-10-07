@@ -197,7 +197,7 @@ on:
         required: false
         type: string
         # renovate: datasource=github-releases depName=stuttgart-things/blueprints
-        default: v3.11.0
+        default: v3.11.1
       sops-module-version:
         description: "Version of stuttgart-things/dagger/sops (for kubeconfig decrypt step)"
         required: false
