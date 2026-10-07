@@ -24,6 +24,19 @@
     },
     {
       "customType": "regex",
+      "description": "STUTTGART-THINGS BLUEPRINTS MODULE PIN (blueprints-version, e.g. blueprints/flux IN call-flux-bootstrap/destroy). UNWATCHED UNTIL NOW AND HAD DRIFTED TO v2.6.1, SO CALLERS WITHOUT THEIR OWN VALUE MISSED THE FLUX CACHE FIX (stuttgart-things/blueprints#182)",
+      "fileMatch": [
+        "^\\.github/workflows/[^/]+\\.ya?ml$"
+      ],
+      "matchStrings": [
+        "blueprints-version:\\n(?:[ \\t]+[^\\n]*\\n)*?[ \\t]+default:[ \\t]*['\"]?(?<currentValue>v?\\d+\\.\\d+\\.\\d+)['\"]?"
+      ],
+      "depNameTemplate": "stuttgart-things/blueprints",
+      "datasourceTemplate": "github-releases",
+      "versioningTemplate": "semver"
+    },
+    {
+      "customType": "regex",
       "description": "DAGGER CLI PIN, PASSED TO dagger/dagger-for-github",
       "fileMatch": [
         "^\\.github/workflows/[^/]+\\.ya?ml$"
