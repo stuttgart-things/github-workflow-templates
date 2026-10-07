@@ -61,7 +61,7 @@ on:
         # resources by name (crossplane-configurations#470). Verified against all
         # 36 Configurations in crossplane-configurations (#201).
         # renovate: datasource=github-releases depName=stuttgart-things/dagger
-        default: v0.137.2
+        default: v0.137.3
 
 permissions:
   contents: read
