@@ -60,7 +60,7 @@ on:
         required: false
         type: string
         # renovate: datasource=github-releases depName=stuttgart-things/dagger
-        default: v0.137.0
+        default: v0.137.1
       kcl-image:
         description: "KCL CLI image used for the formatting check"
         required: false
