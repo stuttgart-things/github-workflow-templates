@@ -50,7 +50,7 @@ on:
         description: "Version of stuttgart-things/blueprints/flux"
         required: false
         type: string
-        default: v2.6.1
+        default: v3.10.3
       flux-cli-image:
         description: "Flux CLI image used for the reconciliation wait"
         required: false
