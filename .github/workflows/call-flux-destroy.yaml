@@ -50,7 +50,7 @@ on:
         required: false
         type: string
         # renovate: datasource=github-releases depName=stuttgart-things/dagger
-        default: v0.136.3
+        default: v0.137.1
 
 jobs:
   Flux-Destroy:
