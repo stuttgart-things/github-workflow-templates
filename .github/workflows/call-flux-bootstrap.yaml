@@ -50,6 +50,7 @@ on:
         description: "Version of stuttgart-things/blueprints/flux"
         required: false
         type: string
+        # renovate: datasource=github-releases depName=stuttgart-things/blueprints
         default: v3.10.3
       flux-cli-image:
         description: "Flux CLI image used for the reconciliation wait"
@@ -61,6 +62,7 @@ on:
         description: "SOPS Dagger module version"
         required: false
         type: string
+        # renovate: datasource=github-releases depName=stuttgart-things/dagger
         default: v0.136.3
 
 jobs:

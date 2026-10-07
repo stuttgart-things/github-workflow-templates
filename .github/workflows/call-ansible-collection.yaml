@@ -21,6 +21,7 @@ on:
       dagger-module-version:
         required: false
         type: string
+        # renovate: datasource=github-releases depName=stuttgart-things/dagger
         default: v0.136.3
       environment-name:
         required: false

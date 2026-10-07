@@ -43,11 +43,13 @@ on:
         description: "Version of stuttgart-things/blueprints/flux"
         required: false
         type: string
+        # renovate: datasource=github-releases depName=stuttgart-things/blueprints
         default: v3.10.3
       sops-module-version:
         description: "SOPS Dagger module version"
         required: false
         type: string
+        # renovate: datasource=github-releases depName=stuttgart-things/dagger
         default: v0.136.3
 
 jobs:

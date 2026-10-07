@@ -21,7 +21,8 @@ on:
         default: linux/amd64
         type: string
       crane-module-version:
-        default: v0.91.0
+        # renovate: datasource=github-releases depName=stuttgart-things/dagger
+        default: v0.137.0
         type: string
         description: "Version of github.com/stuttgart-things/dagger/crane module"
       dagger-action-version:

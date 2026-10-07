@@ -30,6 +30,7 @@ on:
       dagger-module-version:
         required: false
         type: string
+        # renovate: datasource=github-releases depName=stuttgart-things/blueprints
         default: v1.15.0
       environment-name:
         required: false

@@ -55,7 +55,13 @@ on:
         # the last good result while Synced goes False, so the XR looks healthy
         # while it has silently stopped reconciling. Cost a live cluster before
         # it was caught; see stuttgart-things/crossplane-configurations#283.
-        default: v0.122.0
+        # v0.137.0: render passes every non-XR manifest from examples/ as an
+        # extra resource, not only EnvironmentConfigs (stuttgart-things/dagger#388);
+        # v0.122.0 failed the render for Configurations that fetch other
+        # resources by name (crossplane-configurations#470). Verified against all
+        # 36 Configurations in crossplane-configurations (#201).
+        # renovate: datasource=github-releases depName=stuttgart-things/dagger
+        default: v0.137.0
 
 permissions:
   contents: read
