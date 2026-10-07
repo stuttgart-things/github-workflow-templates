@@ -68,5 +68,17 @@
         "# renovate: datasource=(?<datasource>[a-z-]+) depName=(?<depName>[^\\s]+)\\n[ \\t]+default:[ \\t]*['\"]?[^'\"\\s:]+:(?<currentValue>[^'\"\\s]+)['\"]?"
       ]
     }
+  ],
+  "packageRules": [
+    {
+      "description": "call-terraform-vault calls blueprints/configuration create-secrets-file and terraform-apply. Both were removed in blueprints v2.0.0 (#143: secrets moved to the secrets module, Terraform to vm), so this pin must stay on v1.x until the workflow is migrated. Without this rule Renovate would bump it to v3 together with the other blueprints pins.",
+      "matchFileNames": [
+        ".github/workflows/call-terraform-vault.yaml"
+      ],
+      "matchDepNames": [
+        "stuttgart-things/blueprints"
+      ],
+      "allowedVersions": "<2.0.0"
+    }
   ]
 }
