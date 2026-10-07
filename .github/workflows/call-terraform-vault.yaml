@@ -54,7 +54,7 @@ on:
         required: false
         type: string
         # renovate: datasource=github-releases depName=stuttgart-things/dagger
-        default: v0.137.1
+        default: v0.137.2
       terraform-version:
         required: false
         type: string
