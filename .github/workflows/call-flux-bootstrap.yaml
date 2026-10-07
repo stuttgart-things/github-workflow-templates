@@ -51,7 +51,7 @@ on:
         required: false
         type: string
         # renovate: datasource=github-releases depName=stuttgart-things/blueprints
-        default: v3.10.3
+        default: v3.11.0
       flux-cli-image:
         description: "Flux CLI image used for the reconciliation wait"
         required: false
