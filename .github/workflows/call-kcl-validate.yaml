@@ -54,7 +54,7 @@ on:
         description: "Dagger CLI version"
         required: false
         type: string
-        default: "0.21.9"
+        default: "0.21.10"
       kcl-module-version:
         description: "Version of stuttgart-things/dagger/kcl to invoke"
         required: false

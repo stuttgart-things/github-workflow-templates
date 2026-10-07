@@ -24,7 +24,7 @@ on:
         default: "github.com/stuttgart-things/dagger/trivy@v0.132.0"
         type: string
       dagger-version:
-        default: "0.21.9"
+        default: "0.21.10"
         type: string
       artifact-name:
         default: "trivy-image-report"
