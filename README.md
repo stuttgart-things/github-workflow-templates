@@ -160,6 +160,35 @@ matrix in the caller to cover multiple modules.
 
 </details>
 
+<details><summary>TECHDOCS (BUILD IN CI, PUBLISH TO MINIO)</summary>
+
+Builds Backstage TechDocs with the [techdocs Dagger module](https://github.com/stuttgart-things/dagger/tree/main/techdocs).
+PRs only build (a broken `mkdocs.yml` fails the PR); `main` publishes to the
+bucket a Backstage with `techdocs.builder: external` reads. The entity path is
+read from `catalog-info.yaml` (the entity carrying `backstage.io/techdocs-ref`).
+
+```yaml
+on:
+  pull_request:
+    paths: ["docs/**", "mkdocs.yml", "catalog-info.yaml"]
+  push:
+    branches: [main]
+    paths: ["docs/**", "mkdocs.yml", "catalog-info.yaml"]
+
+jobs:
+  techdocs:
+    uses: stuttgart-things/github-workflow-templates/.github/workflows/call-techdocs.yaml@main
+    with:
+      publish: ${{ github.event_name == 'push' }}
+      endpoint: https://minio.sthings-platform.4sthings.tiab.ssc.sva.de
+      ca-cert: ${{ vars.TECHDOCS_CA_CERT }}   # PEM, only for a private CA
+    secrets:
+      TECHDOCS_S3_ACCESS_KEY: ${{ secrets.TECHDOCS_S3_ACCESS_KEY }}
+      TECHDOCS_S3_SECRET_KEY: ${{ secrets.TECHDOCS_S3_SECRET_KEY }}
+```
+
+</details>
+
 ## ACTIONS
 
 <details><summary>SEND MESSAGE TO HOMERUN</summary>
