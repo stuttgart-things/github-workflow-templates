@@ -10,12 +10,13 @@ on:
         required: true
         type: string
       golint-version:
-        default: v2.12.2-alpine
-        required: true
+        # must be built with a Go >= the consumer's go.mod go directive
+        default: v2.15.0-alpine
+        required: false
         type: string
       golang-version:
-        default: 1.26.6
-        required: true
+        default: "1.27.3"
+        required: false
         type: string
       timeout-minutes:
         default: 10m
@@ -23,15 +24,15 @@ on:
         type: string
       environment-name:
         default: k8s
-        required: true
+        required: false
         type: string
       accept-linterrors:
         default: false
-        required: true
+        required: false
         type: boolean
       accept-failedtests:
         default: false
-        required: true
+        required: false
         type: boolean
 
 jobs:
@@ -59,6 +60,8 @@ jobs:
       # the golang image pins GOTOOLCHAIN=local; auto lets a consumer's
       # go.mod pull a newer toolchain instead of failing the build
       GOTOOLCHAIN: auto
+      # empty when the caller has no HOMERUN_TOKEN: the homerun step is skipped
+      HOMERUN_TOKEN: ${{ secrets.HOMERUN_TOKEN }}
     steps:
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -86,7 +89,7 @@ jobs:
           start: ${{ env.start }}
 
       - name: Send Message To Homerun
-        if: always()
+        if: always() && env.HOMERUN_TOKEN != ''
         uses: stuttgart-things/github-workflow-templates/actions/send-homerun-message@56f6ab274dc611593c8b241fbbbd4338bccad347 # main
         with:
           url: "https://homerun.homerun-dev.sthings-vsphere.labul.sva.de/generic"
@@ -108,6 +111,8 @@ jobs:
       # the golang image pins GOTOOLCHAIN=local; auto lets a consumer's
       # go.mod pull a newer toolchain instead of failing the build
       GOTOOLCHAIN: auto
+      # empty when the caller has no HOMERUN_TOKEN: the homerun step is skipped
+      HOMERUN_TOKEN: ${{ secrets.HOMERUN_TOKEN }}
     steps:
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -134,7 +139,7 @@ jobs:
           start: ${{ env.start }}
 
       - name: Send Message To Homerun
-        if: always()
+        if: always() && env.HOMERUN_TOKEN != ''
         uses: stuttgart-things/github-workflow-templates/actions/send-homerun-message@56f6ab274dc611593c8b241fbbbd4338bccad347 # main
         with:
           url: "https://homerun.homerun-dev.sthings-vsphere.labul.sva.de/generic"
