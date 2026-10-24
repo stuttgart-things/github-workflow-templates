@@ -38,8 +38,8 @@ jobs:
       module-name: kaeffken
       environment-name: k8s
       runs-on: ghr-kaeffken-skyami-cicd
-      golint-version: v1.61.0-alpine
-      golang-version: "1.23.1"
+      golint-version: v2.15.0-alpine
+      golang-version: "1.27.3"
       accept-linterrors: true
       accept-failedtests: false
     secrets: inherit
