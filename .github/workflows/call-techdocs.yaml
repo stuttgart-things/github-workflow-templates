@@ -42,7 +42,7 @@ on:
         type: string
         description: "PEM CA certificate for an endpoint signed by a private CA (not a secret)."
       dagger-module:
-        default: "github.com/stuttgart-things/dagger/techdocs@v0.138.0"
+        default: "github.com/stuttgart-things/dagger/techdocs@v0.139.0"
         type: string
       dagger-version:
         default: "0.21.10"
