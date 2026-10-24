@@ -126,8 +126,9 @@ jobs:
       - name: Build go binary
         run: |
           go mod tidy
-          CGO_ENABLED=0 go build -buildvcs=false -o ${{ inputs.module-name }}
-          du -sh ./${{ inputs.module-name }}
+          # into bin/: a repo may have a directory named like the module
+          CGO_ENABLED=0 go build -buildvcs=false -o bin/${{ inputs.module-name }}
+          du -sh ./bin/${{ inputs.module-name }}
           echo "SEVERITY=SUCCESS" >> $GITHUB_ENV
 
       - name: Set homerun values
