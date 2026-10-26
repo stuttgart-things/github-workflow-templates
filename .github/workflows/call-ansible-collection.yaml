@@ -17,7 +17,7 @@ on:
       dagger-version:
         required: false
         type: string
-        default: v0.21.10
+        default: v0.21.11
       dagger-module-version:
         required: false
         type: string
