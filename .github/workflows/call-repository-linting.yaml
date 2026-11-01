@@ -24,9 +24,18 @@ on:
         type: string
         default: main
       dagger-version:
+        description: >-
+          Dagger CLI/engine version. Must be >= 0.19.11 on ubuntu-latest
+          (Ubuntu 26.04, kernel 7.x): older engines force iptables-legacy and
+          crash-loop when the legacy nat table is not available (dagger/dagger#11607).
         required: false
         type: string
         default: "0.21.10"
+      engine-start-timeout:
+        description: "Seconds to wait for the Dagger engine to come up before failing"
+        required: false
+        type: number
+        default: 180
       dagger-module-version:
         required: false
         type: string
@@ -75,6 +84,58 @@ jobs:
         with:
           fetch-depth: 0
           ref: ${{ inputs.branch-name }}
+
+      - name: Install Dagger CLI
+        uses: dagger/dagger-for-github@27b130bf0f79a7f6fbbbe0fbca6760dc9bb40a77 # v8.4.1
+        with:
+          version: ${{ inputs.dagger-version }}
+
+      # Dagger engines < v0.19.11 hard-code iptables-legacy. On kernels where the
+      # legacy nat table is not loaded (ubuntu-latest = Ubuntu 26.04, kernel 7.x)
+      # the engine exits with "can't initialize iptables table `nat'" and Docker
+      # restarts it forever, so the CLI waits 10 min for engine.sock and fails.
+      # v0.19.11+ detects this and switches to nftables (dagger/dagger#11731).
+      - name: Check Dagger engine compatibility
+        env:
+          DAGGER_VERSION_INPUT: ${{ inputs.dagger-version }}
+        run: |
+          MIN_VERSION="0.19.11"
+          REQUESTED="${DAGGER_VERSION_INPUT#v}"
+          if [ "$REQUESTED" = "latest" ] || [ -z "$REQUESTED" ]; then
+            exit 0
+          fi
+          OLDEST="$(printf '%s\n%s\n' "$REQUESTED" "$MIN_VERSION" | sort -V | head -n1)"
+          if [ "$OLDEST" = "$MIN_VERSION" ]; then
+            echo "Dagger ${REQUESTED} >= ${MIN_VERSION}: nftables fallback available"
+            exit 0
+          fi
+
+          echo "::warning title=Outdated dagger-version::dagger-version ${REQUESTED} is older than ${MIN_VERSION} and only works on hosts with legacy iptables (e.g. ubuntu-24.04). Drop the dagger-version override or raise it to >= ${MIN_VERSION}. See stuttgart-things/github-workflow-templates#226."
+
+          # Best effort: load the legacy xtables modules on the host so the old
+          # engine can still find its nat table.
+          if [ ! -e /proc/net/ip_tables_names ]; then
+            sudo modprobe -a ip_tables iptable_nat iptable_filter 2>&1 || true
+          fi
+          if [ ! -e /proc/net/ip_tables_names ]; then
+            echo "::error title=Dagger engine will not start::Legacy iptables is not available on this runner ($(uname -r)) and dagger ${REQUESTED} < ${MIN_VERSION} cannot fall back to nftables. Set dagger-version >= ${MIN_VERSION} (template default: 0.21.10)."
+            exit 1
+          fi
+
+      - name: Start Dagger engine
+        env:
+          ENGINE_START_TIMEOUT: ${{ inputs.engine-start-timeout }}
+        run: |
+          if ! timeout "${ENGINE_START_TIMEOUT}" dagger --progress plain core version; then
+            echo "::error title=Dagger engine did not start::Engine not ready after ${ENGINE_START_TIMEOUT}s"
+            docker ps -a --filter name=dagger-engine
+            for c in $(docker ps -a --filter name=dagger-engine --format '{{.Names}}'); do
+              echo "::group::docker logs ${c}"
+              docker logs --tail 50 "${c}" 2>&1 | grep -v '^dnsmasq' || true
+              echo "::endgroup::"
+            done
+            exit 1
+          fi
 
       - name: Run repository linting
         uses: dagger/dagger-for-github@27b130bf0f79a7f6fbbbe0fbca6760dc9bb40a77 # v8.4.1
