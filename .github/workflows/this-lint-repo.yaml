@@ -14,7 +14,7 @@ on:
 
 jobs:
   Lint-Repository:
-    uses: stuttgart-things/github-workflow-templates/.github/workflows/call-repository-linting.yaml@56f6ab274dc611593c8b241fbbbd4338bccad347 # main
+    uses: ./.github/workflows/call-repository-linting.yaml  # TEMP test of #227, revert before merge
     with:
       runs-on: ubuntu-latest
       environment-name: linting
