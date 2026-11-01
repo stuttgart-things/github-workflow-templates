@@ -45,7 +45,7 @@ on:
         default: "github.com/stuttgart-things/dagger/techdocs@v0.138.0"
         type: string
       dagger-version:
-        default: "0.21.10"
+        default: "0.21.11"
         type: string
     secrets:
       TECHDOCS_S3_ACCESS_KEY:
