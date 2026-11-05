@@ -21,6 +21,14 @@ on:
       playbook:
         type: string
         required: true
+      # false (default): findings are reported (log, step summary, SARIF) but
+      # do not fail the job -- the old behaviour, so existing callers with
+      # findings stay green. true: ansible-lint's exit code fails the job.
+      # Switch a caller to true once its lint is clean (#228).
+      fail-on-findings:
+        default: false
+        required: false
+        type: boolean
 
 jobs:
   Ansible-Lint:
@@ -37,12 +45,49 @@ jobs:
           fetch-depth: '0'
 
       - name: Run ansible lint
+        id: lint
+        shell: bash
+        env:
+          TARGET: ${{ inputs.playbook }}
+          FAIL_ON_FINDINGS: ${{ inputs.fail-on-findings }}
         run: |
+          set -uo pipefail
           ansible-lint --version
-          ansible-lint --sarif-file ${{ inputs.playbook }}-lint ${{ inputs.playbook }} || true
+
+          # A lint that checks nothing is a configuration error, not a finding:
+          # fail regardless of fail-on-findings (#228 -- three repos linted a
+          # missing tests/test.yml for months, always green).
+          if [ ! -e "${TARGET}" ]; then
+            echo "::error::lint target '${TARGET}' does not exist"
+            echo "### ansible-lint: target \`${TARGET}\` does not exist" >> "${GITHUB_STEP_SUMMARY}"
+            exit 1
+          fi
+
+          # tasks/ -> tasks-lint.sarif (a slash in the name made "tasks/-lint").
+          sarif="$(printf '%s' "${TARGET%/}" | tr '/' '-')-lint.sarif"
+          echo "sarif=${sarif}" >> "${GITHUB_OUTPUT}"
+
+          ansible-lint --sarif-file "${sarif}" "${TARGET}" 2>&1 | tee ansible-lint.log
+          rc=${PIPESTATUS[0]}
+
+          {
+            echo "### ansible-lint \`${TARGET}\`"
+            echo '```'
+            grep -E '^(Passed|Failed):' ansible-lint.log || echo "exit code ${rc}"
+            echo '```'
+          } >> "${GITHUB_STEP_SUMMARY}"
+
+          if [ "${rc}" -ne 0 ]; then
+            if [ "${FAIL_ON_FINDINGS}" = "true" ]; then
+              exit "${rc}"
+            fi
+            echo "::warning::ansible-lint reported findings (exit ${rc}); not failing because fail-on-findings is false"
+          fi
 
       - name: Upload linting results
+        if: always() && steps.lint.outputs.sarif != ''
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: ansible-lint
-          path: ${{ inputs.playbook }}-lint
+          path: ${{ steps.lint.outputs.sarif }}
+          if-no-files-found: warn
