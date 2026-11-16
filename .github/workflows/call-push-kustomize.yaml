@@ -118,7 +118,7 @@ jobs:
       # ConfigMap whose embedded YAML got folded onto one line is still a
       # valid manifest and pushes green. Pull it back and parse it.
       - name: Verify the pushed base
-        uses: stuttgart-things/github-workflow-templates/actions/verify-kustomize-base@56f6ab274dc611593c8b241fbbbd4338bccad347 # main
+        uses: stuttgart-things/github-workflow-templates/actions/verify-kustomize-base@a3327a81095a8a6e727b43bad67078d9f9022976 # main
         with:
           artifact-ref: ${{ steps.ref.outputs.artifact-ref }}
           registry-token: ${{ secrets.GITHUB_TOKEN }}
