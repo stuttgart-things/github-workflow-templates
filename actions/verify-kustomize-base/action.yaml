@@ -80,7 +80,21 @@ runs:
         PULL_DIR="${RUNNER_TEMP}/kustomize-base-verify"
         rm -rf "${PULL_DIR}"
         mkdir -p "${PULL_DIR}"
-        oras pull "${ARTIFACT_REF}" -o "${PULL_DIR}"
+        # Right after the push, ghcr.io can still answer "not found" for the
+        # new tag for a few seconds (#230), so retry with a short backoff.
+        for attempt in 1 2 3 4 5; do
+          if oras pull "${ARTIFACT_REF}" -o "${PULL_DIR}"; then
+            break
+          fi
+          if [ "${attempt}" -eq 5 ]; then
+            echo "::error::could not pull ${ARTIFACT_REF} after ${attempt} attempts"
+            exit 1
+          fi
+          echo "Pull failed (attempt ${attempt}), retrying in $((2 ** attempt))s ..."
+          sleep $((2 ** attempt))
+          rm -rf "${PULL_DIR}"
+          mkdir -p "${PULL_DIR}"
+        done
 
         echo "Pulled ${ARTIFACT_REF}:"
         ls -1 "${PULL_DIR}"
