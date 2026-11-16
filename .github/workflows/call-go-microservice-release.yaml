@@ -75,6 +75,9 @@ jobs:
           echo "Current latest tag: $BEFORE"
 
       - name: Semantic release
+        id: semantic
+        # A failure after the tag is completed below (#230).
+        continue-on-error: true
         uses: dagger/dagger-for-github@27b130bf0f79a7f6fbbbe0fbca6760dc9bb40a77 # v8.4.1
         with:
           module: ${{ inputs.dagger-release-module }}
@@ -120,6 +123,50 @@ jobs:
           git pull --ff-only || true
           echo "HEAD is now at $(git rev-parse --short HEAD)"
           echo "Tag ${{ steps.version-after.outputs.version }} points to $(git rev-parse --short ${{ steps.version-after.outputs.version }})"
+
+      # semantic-release pushes the changelog commit and the tag, then its
+      # notes ref, and only then creates the GitHub release. When GitHub
+      # rejects the notes push (#230: "missing necessary objects" or just
+      # "failed" -- transient), the tag is on main but there is no release, and
+      # a rerun finds nothing to release. This step finishes such a release so
+      # the rest of the job runs. Any other failure of semantic-release still
+      # fails the job.
+      - name: Complete an interrupted release
+        if: steps.semantic.outcome == 'failure'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BEFORE: ${{ steps.version-before.outputs.version }}
+        run: |
+          set -euo pipefail
+          git fetch --tags --force
+          git pull --ff-only || true
+          TAG=$(git tag --sort=-v:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -1 || true)
+          if [ -z "$TAG" ] || [ "$TAG" = "$BEFORE" ]; then
+            echo "::error::semantic-release failed and created no new tag (latest: ${TAG:-none}) -- nothing to complete."
+            exit 1
+          fi
+          if [ "$(git rev-list -n 1 "$TAG")" != "$(git rev-parse HEAD)" ]; then
+            echo "::error::semantic-release failed and $TAG is not main's HEAD -- not completing it automatically."
+            exit 1
+          fi
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "::warning::semantic-release failed after publishing the GitHub release $TAG; continuing with it."
+            exit 0
+          fi
+          # The section semantic-release just wrote: from this version's
+          # heading ("# [x.y.z]" or "## [x.y.z]") up to the next one.
+          NOTES="${RUNNER_TEMP}/release-notes.md"
+          if [ -f CHANGELOG.md ]; then
+            awk -v v="[${TAG#v}]" '
+              /^##? \[/ { if (f) exit; if (index($0, v)) { f = 1; next } }
+              f' CHANGELOG.md > "$NOTES"
+          fi
+          if [ -s "$NOTES" ]; then
+            gh release create "$TAG" --verify-tag --title "$TAG" --notes-file "$NOTES"
+          else
+            gh release create "$TAG" --verify-tag --title "$TAG" --generate-notes
+          fi
+          echo "::warning::semantic-release failed after tagging $TAG (#230); created the GitHub release here."
 
       - name: GoReleaser
         if: steps.version-after.outputs.new_release == 'true'
