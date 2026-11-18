@@ -248,6 +248,19 @@ introduced by the publishing toolchain is in scope.
 </details>
 
 
+## CLAUDE CODE SKILLS
+
+[`.claude/skills/`](.claude/skills/) holds Claude Code skills for working with these templates.
+Claude Code loads them automatically in this repo. To use them everywhere, link them into your user skills:
+
+```bash
+ln -s ~/projects/github-workflow-templates/.claude/skills/semver-start-v0 ~/.claude/skills/semver-start-v0
+```
+
+| Skill | Use |
+| --- | --- |
+| [`semver-start-v0`](.claude/skills/semver-start-v0/SKILL.md) | A new repo with the semantic-release workflow starts at `v0.1.0`, not `v1.0.0`: a `v0.0.0` tag on the first commit before the first release. Also covers a repo released as `v1.0.0` by mistake. |
+
 ## DEV
 
 <details><summary>ALL TASKS</summary>
