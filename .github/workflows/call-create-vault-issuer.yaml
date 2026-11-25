@@ -78,7 +78,7 @@ on:
         required: false
         type: string
         # renovate: datasource=github-releases depName=stuttgart-things/blueprints
-        default: v3.12.2
+        default: v3.12.4
 
 permissions:
   contents: read

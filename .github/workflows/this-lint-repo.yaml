@@ -23,6 +23,6 @@ jobs:
       continue-error: "true"
       dagger-version: v0.21.12
       # renovate: datasource=github-releases depName=stuttgart-things/blueprints
-      dagger-module-version: v3.12.2
+      dagger-module-version: v3.12.4
       branch-name: ${{ github.head_ref || github.ref_name }}
     secrets: inherit # pragma: allowlist secret
