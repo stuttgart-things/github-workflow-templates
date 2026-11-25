@@ -38,7 +38,10 @@ Releasing: add the entry under `Unreleased` in CHANGELOG.md with each PR.
 To release, move it under the new version and run
 `gh release create vX.Y.Z --target <merge sha> --notes-file <entry>`.
 Only `v*` tags are template versions. The older tags (`go-1.13.1`,
-`go-1.23.1`, `golang-1.24.0`, `mc2024-05-14`) are leftovers.
+`go-1.23.1`, `golang-1.24.0`, `mc2024-05-14`) are frozen snapshots: some
+repos still pin them (machineshop, docs, download-install-binary,
+install-configure-vault as of 2026-11-25). Do not delete or move them until
+those repos are on a `v*` pin.
 
 ## REUSABLE WORKFLOW-CALLS
 
