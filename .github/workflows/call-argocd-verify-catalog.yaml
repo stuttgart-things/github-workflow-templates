@@ -33,7 +33,7 @@ on:
         required: false
         type: string
         # renovate: datasource=github-releases depName=stuttgart-things/dagger
-        default: v0.141.1
+        default: v0.141.3
 
 permissions:
   contents: read
