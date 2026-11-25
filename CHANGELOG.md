@@ -5,6 +5,8 @@ Consumers pin `@<sha> # vX.Y.Z`; Renovate proposes the bumps.
 
 ## Unreleased
 
+## v1.2.0 (2026-11-25)
+
 - `call-repository-linting`: new step "Check dagger-module-version" (#234).
   It warns on `dagger-module-version` overrides older than v3. It also fails
   early, with a clear error, when `dagger-version` is older than the module's
