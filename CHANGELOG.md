@@ -5,6 +5,13 @@ Consumers pin `@<sha> # vX.Y.Z`; Renovate proposes the bumps.
 
 ## Unreleased
 
+- `call-repository-linting`: new step "Check dagger-module-version" (#234).
+  It warns on `dagger-module-version` overrides older than v3. It also fails
+  early, with a clear error, when `dagger-version` is older than the module's
+  `engineVersion` (v3.12.x needs >= v0.21.9). That combination failed before
+  as well, but only after the engine had started. The engine check is best
+  effort and is skipped when the module's `dagger.json` cannot be read.
+
 ## v1.1.0 (2026-11-25)
 
 Dependency bumps (Renovate), no input changes:
