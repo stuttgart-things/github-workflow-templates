@@ -34,6 +34,11 @@ into a single PR, instead of one per workflow:
 | **minor** | a new workflow, action or optional input whose default keeps the old behaviour |
 | **patch** | a fix that keeps inputs, defaults and outcome, and docs |
 
+Dependency bumps (Renovate: actions, images, Dagger modules, tool versions in
+input defaults) follow the dependency: a major of the dependency, or one
+known to change behaviour, is a **major** here. Everything else is collected
+as a **minor**, so one release can carry a batch of Renovate merges.
+
 Releasing: add the entry under `Unreleased` in CHANGELOG.md with each PR.
 To release, move it under the new version and run
 `gh release create vX.Y.Z --target <merge sha> --notes-file <entry>`.

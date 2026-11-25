@@ -5,8 +5,24 @@ Consumers pin `@<sha> # vX.Y.Z`; Renovate proposes the bumps.
 
 ## Unreleased
 
-- README: versioning rules, pinning and Renovate setup; usage examples
-  pinned to `v1.0.0` instead of `@main`. CHANGELOG added. Docs only.
+## v1.1.0 (2026-11-25)
+
+Dependency bumps (Renovate), no input changes:
+
+- `stuttgart-things/dagger` modules v0.141.1, `dagger/dagger` CLI v0.21.12
+  (all Dagger-based workflows)
+- `stuttgart-things/blueprints` v3.12.2 (argocd/flux bootstrap, vault
+  issuer/k8s-auth, flux-destroy, repository-linting)
+- `controlplaneio-fluxcd/flux-operator` v0.63.1 (`call-flux-destroy`),
+  `ghcr.io/fluxcd/flux-cli` v2.10.1 (`call-flux-bootstrap`)
+- `joshkeegan/zip` v3.24.4 (`call-release-module`),
+  `gofrolist/molecule-action` v2.9.22 (`call-moluecule-test`)
+- digests: `actions/setup-go`, `actions/setup-python`,
+  `goreleaser/goreleaser-action`, `skitionek/notify-microsoft-teams`, and the
+  internal `verify-kustomize-base` pin
+
+Docs: README versioning rules (pinning, Renovate group, major/minor/patch,
+dependency bumps), usage examples pinned instead of `@main`, this CHANGELOG.
 
 ## v1.0.0 (2026-11-25)
 
