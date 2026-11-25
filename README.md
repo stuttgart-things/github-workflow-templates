@@ -1,5 +1,45 @@
 # stuttgart-things/github-workflow-templates
 
+## VERSIONING
+
+Templates are released as semver tags (`v1.0.0`, ...), listed in
+[CHANGELOG.md](CHANGELOG.md). Pin a **commit SHA with the tag as a comment**,
+never `@main`:
+
+```yaml
+uses: stuttgart-things/github-workflow-templates/.github/workflows/call-validate-terraform.yaml@01c34611db706595196ee0ab5e851f8f29f55390 # v1.0.0
+```
+
+`@main` changes every consumer's CI with each merge here, without a commit in
+the consumer and without a record of which template version a run used. A
+bare SHA without the comment cannot be read or bumped.
+
+**Renovate** in the consuming repo proposes the bumps, as reviewable PRs.
+`config:recommended` handles `@<sha> # vX.Y.Z` refs, and
+`helpers:pinGitHubActionDigests` pins tags to SHAs. One group puts a release
+into a single PR, instead of one per workflow:
+
+```json
+"packageRules": [
+  {
+    "matchPackageNames": ["stuttgart-things/github-workflow-templates"],
+    "groupName": "github-workflow-templates"
+  }
+]
+```
+
+| Bump | When |
+|---|---|
+| **major** | anything that can turn a green consumer red: a removed or renamed workflow, action or input, a changed default, a newly required input, changed job behaviour, runner, image or permissions requirements |
+| **minor** | a new workflow, action or optional input whose default keeps the old behaviour |
+| **patch** | a fix that keeps inputs, defaults and outcome, and docs |
+
+Releasing: add the entry under `Unreleased` in CHANGELOG.md with each PR.
+To release, move it under the new version and run
+`gh release create vX.Y.Z --target <merge sha> --notes-file <entry>`.
+Only `v*` tags are template versions. The older tags (`go-1.13.1`,
+`go-1.23.1`, `golang-1.24.0`, `mc2024-05-14`) are leftovers.
+
 ## REUSABLE WORKFLOW-CALLS
 
 <details><summary>WORFKLOW-FOLDER</summary>
@@ -33,7 +73,7 @@ on:
 jobs:
   validate-golang:
     name: Valdiate Golang
-    uses: stuttgart-things/github-workflow-templates/.github/workflows/call-golang-validation.yaml@main
+    uses: stuttgart-things/github-workflow-templates/.github/workflows/call-golang-validation.yaml@01c34611db706595196ee0ab5e851f8f29f55390 # v1.0.0
     with:
       module-name: kaeffken
       environment-name: k8s
@@ -53,7 +93,7 @@ jobs:
 jobs:
   build-image:
     name: Build & Push Image
-    uses: stuttgart-things/github-workflow-templates/.github/workflows/call-ko-build.yaml@main
+    uses: stuttgart-things/github-workflow-templates/.github/workflows/call-ko-build.yaml@01c34611db706595196ee0ab5e851f8f29f55390 # v1.0.0
     with:
       registry: ghcr.io
       image-repo: ${{ github.repository }}
@@ -76,7 +116,7 @@ downstream scan/deploy/PR-comment jobs.
 jobs:
   push-kustomize:
     name: Push Kustomize OCI Base
-    uses: stuttgart-things/github-workflow-templates/.github/workflows/call-push-kustomize.yaml@main
+    uses: stuttgart-things/github-workflow-templates/.github/workflows/call-push-kustomize.yaml@01c34611db706595196ee0ab5e851f8f29f55390 # v1.0.0
     with:
       kcl-source-dir: kcl
       kcl-profile-file: tests/kcl-deploy-profile.yaml
@@ -102,7 +142,7 @@ on:
 jobs:
   cleanup:
     name: Delete PR-tagged GHCR versions
-    uses: stuttgart-things/github-workflow-templates/.github/workflows/call-cleanup-pr-artifacts.yaml@main
+    uses: stuttgart-things/github-workflow-templates/.github/workflows/call-cleanup-pr-artifacts.yaml@01c34611db706595196ee0ab5e851f8f29f55390 # v1.0.0
     with:
       packages: |
         myrepo
@@ -144,7 +184,7 @@ jobs:
     strategy:
       matrix:
         module-dir: [kcl/ansible, kcl/ansible-run, kcl/buildah]
-    uses: stuttgart-things/github-workflow-templates/.github/workflows/call-kcl-validate.yaml@main
+    uses: stuttgart-things/github-workflow-templates/.github/workflows/call-kcl-validate.yaml@01c34611db706595196ee0ab5e851f8f29f55390 # v1.0.0
     with:
       module-dir: ${{ matrix.module-dir }}
     secrets: inherit
@@ -177,7 +217,7 @@ on:
 
 jobs:
   techdocs:
-    uses: stuttgart-things/github-workflow-templates/.github/workflows/call-techdocs.yaml@main
+    uses: stuttgart-things/github-workflow-templates/.github/workflows/call-techdocs.yaml@01c34611db706595196ee0ab5e851f8f29f55390 # v1.0.0
     with:
       publish: ${{ github.event_name == 'push' }}
       endpoint: https://minio.sthings-platform.4sthings.tiab.ssc.sva.de
@@ -199,7 +239,7 @@ jobs:
     runs-on: ghr-stuttgart-things-skyami-cicd
     steps:
       - name: Send Message To Homerun
-        uses: stuttgart-things/github-workflow-templates/actions/send-homerun-message@main
+        uses: stuttgart-things/github-workflow-templates/actions/send-homerun-message@01c34611db706595196ee0ab5e851f8f29f55390 # v1.0.0
         with:
           url: "https://homerun.homerun-dev.sthings-vsphere.labul.sva.de/generic"
           secretToken: "${{ secrets.HOMERUN_TOKEN }}" # Pass the secret
@@ -224,7 +264,7 @@ call it directly only when you push a base some other way.
 
 ```yaml
       - name: Verify the pushed base
-        uses: stuttgart-things/github-workflow-templates/actions/verify-kustomize-base@main
+        uses: stuttgart-things/github-workflow-templates/actions/verify-kustomize-base@01c34611db706595196ee0ab5e851f8f29f55390 # v1.0.0
         with:
           artifact-ref: ghcr.io/stuttgart-things/my-app-kustomize:v1.2.3
           registry-token: ${{ secrets.GITHUB_TOKEN }} # omit for a public package
