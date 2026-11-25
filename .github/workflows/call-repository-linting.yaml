@@ -37,6 +37,12 @@ on:
         type: number
         default: 180
       dagger-module-version:
+        description: >-
+          Version of github.com/stuttgart-things/blueprints/repository-linting.
+          Leave it unset to follow the template default. Overrides older than
+          v3 are outdated (#234). A module also needs a Dagger engine >= its
+          dagger.json engineVersion (v3.12.x: v0.21.9), so an override of
+          dagger-version must match it.
         required: false
         type: string
         # renovate: datasource=github-releases depName=stuttgart-things/blueprints
@@ -121,6 +127,38 @@ jobs:
             echo "::error title=Dagger engine will not start::Legacy iptables is not available on this runner ($(uname -r)) and dagger ${REQUESTED} < ${MIN_VERSION} cannot fall back to nftables. Set dagger-version >= ${MIN_VERSION} (template default: 0.21.10)."
             exit 1
           fi
+
+      # A module refuses an older engine ("module requires dagger vX") only
+      # after the engine has started; check it up front with a clear message.
+      # Old module pins (< v3) are what broke the lint runs in #234.
+      - name: Check dagger-module-version
+        env:
+          DAGGER_VERSION_INPUT: ${{ inputs.dagger-version }}
+          MODULE_VERSION_INPUT: ${{ inputs.dagger-module-version }}
+        run: |
+          MODULE="${MODULE_VERSION_INPUT}"
+          MODULE_MAJOR="${MODULE#v}"; MODULE_MAJOR="${MODULE_MAJOR%%.*}"
+          if [ -n "$MODULE_MAJOR" ] && [ "$MODULE_MAJOR" -eq "$MODULE_MAJOR" ] 2>/dev/null && [ "$MODULE_MAJOR" -lt 3 ]; then
+            echo "::warning title=Outdated dagger-module-version::dagger-module-version ${MODULE} is older than v3. Drop the dagger-module-version (and dagger-version) override so the template defaults apply. See stuttgart-things/github-workflow-templates#234."
+          fi
+
+          REQUESTED="${DAGGER_VERSION_INPUT#v}"
+          if [ "$REQUESTED" = "latest" ] || [ -z "$REQUESTED" ]; then
+            exit 0
+          fi
+          # Best effort: without the file (network, tag layout) skip the check.
+          REQUIRED="$(curl -fsSL --max-time 20 "https://raw.githubusercontent.com/stuttgart-things/blueprints/${MODULE}/repository-linting/dagger.json" 2>/dev/null \
+            | sed -n 's/.*"engineVersion"[[:space:]]*:[[:space:]]*"v\{0,1\}\([^"]*\)".*/\1/p' | head -n1)"
+          if [ -z "$REQUIRED" ]; then
+            echo "engineVersion of repository-linting@${MODULE} not readable, skipping the engine check"
+            exit 0
+          fi
+          OLDEST="$(printf '%s\n%s\n' "$REQUESTED" "$REQUIRED" | sort -V | head -n1)"
+          if [ "$OLDEST" != "$REQUIRED" ]; then
+            echo "::error title=dagger-version too old for the module::repository-linting@${MODULE} requires Dagger >= ${REQUIRED}, but dagger-version is ${REQUESTED}. Drop the dagger-version override or raise it to >= ${REQUIRED}. See stuttgart-things/github-workflow-templates#234."
+            exit 1
+          fi
+          echo "Dagger ${REQUESTED} >= ${REQUIRED} required by repository-linting@${MODULE}"
 
       - name: Start Dagger engine
         env:
